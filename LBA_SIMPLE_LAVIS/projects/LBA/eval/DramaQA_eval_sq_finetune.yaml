@@ -27,9 +27,7 @@ datasets:
           # name: "blip2_image_train"
           # image_size: 224 #364
         eval:
-          # name: "blip_video_eval"
-          name: "alpro_video_eval"
-          n_frms: 32
+          name: "blip_image_eval"
           image_size: 224 #364
     text_processor:
         train:

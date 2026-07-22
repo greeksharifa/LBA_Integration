@@ -356,60 +356,90 @@ def save_frames_grid(img_array, out_path):
     img.save(out_path)
 
 
-def uniform_frame_sampling(video_path, num_frames, target_height, target_width, start_time=None, end_time=None):
+def _open_video(video_path, num_frames):
+    if num_frames <= 0:
+        raise ValueError("num_frames must be greater than zero")
+
     cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        cap.release()
+        raise ValueError(f"Unable to open video: {video_path}")
+
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    frame_rate = cap.get(cv2.CAP_PROP_FPS)
+    frame_rate = float(cap.get(cv2.CAP_PROP_FPS))
+    if total_frames <= 0:
+        cap.release()
+        raise ValueError(f"Video has no readable frames: {video_path}")
+    if frame_rate <= 0:
+        cap.release()
+        raise ValueError(f"Video has invalid FPS ({frame_rate}): {video_path}")
 
-    if start_time is None:
-        start_time = 0
-    if end_time is None:
-        end_time = total_frames / frame_rate
+    return cap, total_frames, frame_rate
 
-    start_frame = int(start_time * frame_rate)
-    end_frame = int(end_time * frame_rate)
-    frame_indices = list(range(start_frame, end_frame + 1, (end_frame - start_frame + 1) // num_frames))
 
+def _sample_frame_indices(total_frames, frame_rate, num_frames, start_time, end_time):
+    start_frame = 0 if start_time is None else int(start_time * frame_rate)
+    end_frame = total_frames - 1 if end_time is None else int(end_time * frame_rate)
+    start_frame = min(max(start_frame, 0), total_frames - 1)
+    end_frame = min(max(end_frame, 0), total_frames - 1)
+    if end_frame < start_frame:
+        raise ValueError("end_time must not precede start_time")
+    if num_frames == 1:
+        return [start_frame]
+
+    span = end_frame - start_frame
+    return [
+        round(start_frame + span * index / (num_frames - 1))
+        for index in range(num_frames)
+    ]
+
+
+def _read_video_frames(cap, frame_indices, target_height, target_width):
     frames = []
     for frame_index in frame_indices:
         cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
-        ret, frame = cap.read()
-        if not ret:
-            break
-        frame = cv2.resize(frame, (target_width, target_height))
-        frames.append(frame)
-
-    cap.release()
+        success, frame = cap.read()
+        if not success or frame is None:
+            raise ValueError(f"Unable to read video frame {frame_index}")
+        frames.append(cv2.resize(frame, (target_width, target_height)))
+    if not frames:
+        raise ValueError("No video frames were read")
     return frames
 
 
+def _frames_to_tensor(frames):
+    return torch.stack(
+        [torch.tensor(frame).permute(2, 0, 1).float() for frame in frames],
+        dim=1,
+    )
+
+
+def uniform_frame_sampling(video_path, num_frames, target_height, target_width, start_time=None, end_time=None):
+    cap, total_frames, frame_rate = _open_video(video_path, num_frames)
+    try:
+        frame_indices = _sample_frame_indices(
+            total_frames, frame_rate, num_frames, start_time, end_time
+        )
+        frames = _read_video_frames(
+            cap, frame_indices, target_height, target_width
+        )
+    finally:
+        cap.release()
+    return _frames_to_tensor(frames)
+
+
 def head_tail_frame_sampling(video_path, num_frames, target_height, target_width, start_time=None, end_time=None):
-    cap = cv2.VideoCapture(video_path)
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    frame_rate = cap.get(cv2.CAP_PROP_FPS)
-
-    if start_time is None:
-        start_time = 0
-    if end_time is None:
-        end_time = total_frames / frame_rate
-
-    start_frame = int(start_time * frame_rate)
-    end_frame = int(end_time * frame_rate)
-    frame_indices = [start_frame] + [start_frame + (end_frame - start_frame) // (num_frames - 1) * i for i in range(1, num_frames - 1)] + [end_frame]
-
-    frames = []
-    for frame_index in frame_indices:
-        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
-        ret, frame = cap.read()
-        if not ret:
-            break
-        frame = cv2.resize(frame, (target_width, target_height))
-        frames.append(frame)
-
-    cap.release()
-    if len(frames) == 0:
-        return None
-    return torch.stack([torch.tensor(f).permute(2,0,1).float() for f in frames], dim=1)
+    cap, total_frames, frame_rate = _open_video(video_path, num_frames)
+    try:
+        frame_indices = _sample_frame_indices(
+            total_frames, frame_rate, num_frames, start_time, end_time
+        )
+        frames = _read_video_frames(
+            cap, frame_indices, target_height, target_width
+        )
+    finally:
+        cap.release()
+    return _frames_to_tensor(frames)
 
 
 def load_clip(video_path, num_frames, target_height, target_width, start_time=None, end_time=None, sampling="headtail"):
