@@ -6,9 +6,7 @@
 model:
   arch: blip2_vicuna_instruct_sq
   model_type: vicuna7b
-#  pretrained: "/home/ywjang/models/InstructBLIP/instruct_blip_vicuna13b_trimmed.pth"
-#   finetuned: "/home/hsgo/LBA_LAVIS/lavis/ywjang_output_train/20231207111/checkpoint_31.pth"
-  finetuned: "/home/ywjang/simplesnulavis/lavis/z_output_ckpt/20231207111/checkpoint_63.pth"
+  finetuned: "lavis/z_output_ckpt/20231207111/checkpoint_63.pth"
   load_finetuned: True
   use_grad_checkpoint: True
   freeze_vit: True

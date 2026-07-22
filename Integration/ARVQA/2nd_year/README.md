@@ -41,7 +41,8 @@ We are using DramaQA dataset from this year for answerability reasoning in Video
 
 Download questions raw data from: https://dramaqa.snu.ac.kr/ 
 
-Generate scene graph following: https://github.com/youngyoung1021/cross-graph-attention 
+Generate the scene graph with the pinned `cross-graph-attention` submodule at
+`../../cross-graph-attention/`.
 
 
 

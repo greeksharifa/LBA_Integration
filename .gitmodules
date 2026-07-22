@@ -7,3 +7,6 @@
 [submodule "SeViLA"]
 	path = SeViLA
 	url = https://github.com/Yui010206/SeViLA.git
+[submodule "cross-graph-attention"]
+	path = cross-graph-attention
+	url = https://github.com/youngyoung1021/cross-graph-attention.git

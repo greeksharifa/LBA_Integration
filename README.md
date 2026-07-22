@@ -8,7 +8,7 @@ map and integration baseline.
 
 | Branch | Purpose | Status |
 | --- | --- | --- |
-| [`2022`](https://github.com/greeksharifa/LBA_Integration/tree/2022) | Exact, history-preserving import of `greeksharifa/LBA_Integration_2022` `main` | Published at `1b1f5d0aa714c412b414ef5718a3e597e4cf44e3`; historical `Scene-Graph-Extraction` URL is no longer public |
+| [`2022`](https://github.com/greeksharifa/LBA_Integration/tree/2022) | Exact, history-preserving import of `greeksharifa/LBA_Integration_2022` `main` | Historical snapshot; current scene-graph generation uses the pinned `cross-graph-attention` submodule on `main` |
 | [`2023`](https://github.com/greeksharifa/LBA_Integration/tree/2023) | 2022 architecture with public KAIST ARVQA and KHU DramaQG frozen at the 2023 year-end cutoff | Reproducible snapshot at `ef499a26bd3b371e219abefd8458dd667130854c` |
 | [`2024`](https://github.com/greeksharifa/LBA_Integration/tree/2024) | Current integration tree plus curated SNU/LAVIS video-processing work and public components frozen at the 2024 year-end cutoff | Reproducible snapshot at `f0feea5ffa87db4d23a5f77d75b228cba02cdec1` |
 | `main` | Canonical navigation and current tracked integration baseline | Active hub; not a dated reproducibility guarantee |
@@ -21,6 +21,7 @@ map and integration baseline.
 | `LBA-ARVQA` | `hee-suk-yoon`; KAIST | <https://github.com/hee-suk-yoon/LBA-ARVQA>; no root license in the referenced snapshot |
 | `LBA-DramaQG` | `gminipark`; Kyung Hee University | <https://github.com/gminipark/LBA-DramaQG>; MIT |
 | `SeViLA` | `Yui010206`; UNC | <https://github.com/Yui010206/SeViLA>; BSD-3-Clause, Salesforce |
+| `cross-graph-attention` | `youngyoung1021`; scene-graph generator | <https://github.com/youngyoung1021/cross-graph-attention>; pinned submodule |
 | LAVIS base | Salesforce | <https://github.com/salesforce/LAVIS>; BSD-3-Clause |
 | `LBA_SNU` and local orchestration | SNU integration team | Tracked in this repository under the root license |
 
@@ -34,6 +35,7 @@ to reuse that component; contact its owner when terms are unclear.
 | `LBA-ARVQA` | KAIST answerability/video reasoning | `066672025e136a9b4b24d076b0d6d665c1c5e58f` |
 | `LBA-DramaQG` | KHU question generation | `76a181828577593ab5c216c8eee18104872bfbda` |
 | `SeViLA` | video-language localization and answering | `419e7281da60169d98ca7e81dbce10c8d4019b6b` |
+| `cross-graph-attention` | ARVQA scene-graph generation | pinned submodule |
 | `Integration/` | historical KAIST/KHU exchange code and sample formats | tracked files |
 | `LBA_SIMPLE_LAVIS/` | local LAVIS model, evaluation, and UI code | tracked files |
 | `LBA_SNU/` | SNU orchestration and Gradio integration demo | tracked files |
