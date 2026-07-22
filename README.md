@@ -10,7 +10,7 @@ map and integration baseline.
 | --- | --- | --- |
 | [`2022`](https://github.com/greeksharifa/LBA_Integration/tree/2022) | Exact, history-preserving import of `greeksharifa/LBA_Integration_2022` `main` | Published at `1b1f5d0aa714c412b414ef5718a3e597e4cf44e3`; historical `Scene-Graph-Extraction` URL is no longer public |
 | [`2023`](https://github.com/greeksharifa/LBA_Integration/tree/2023) | 2022 architecture with public KAIST ARVQA and KHU DramaQG frozen at the 2023 year-end cutoff | Reproducible snapshot at `ef499a26bd3b371e219abefd8458dd667130854c` |
-| [`2024`](https://github.com/greeksharifa/LBA_Integration/tree/2024) | Current integration tree plus curated SNU/LAVIS video-processing work and public components frozen at the 2024 year-end cutoff | Reproducible snapshot at `0a9476963e9e07e7c99c575efa78309cdc8e92c2` |
+| [`2024`](https://github.com/greeksharifa/LBA_Integration/tree/2024) | Current integration tree plus curated SNU/LAVIS video-processing work and public components frozen at the 2024 year-end cutoff | Reproducible snapshot at `f0feea5ffa87db4d23a5f77d75b228cba02cdec1` |
 | `main` | Canonical navigation and current tracked integration baseline | Active hub; not a dated reproducibility guarantee |
 
 ## Ownership and provenance
