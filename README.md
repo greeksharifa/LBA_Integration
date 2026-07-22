@@ -1,109 +1,37 @@
-# Module Integration Architecture for Learning by Asking (LBA)
-Multimodal time-series data-based integration architecture for recognizing and supplementing with uncertainties. This architecture contains four modules as shown in the image below.
+# LBA Integration — 2023 snapshot
 
+This branch preserves the 2022 LBA integration architecture and freezes the
+public ARVQA and DramaQG components at the latest commits published by
+`2023-12-31T23:59:59Z`. Third-party code remains in its upstream repositories;
+this repository stores only submodule references.
 
-## Module Information
+## Frozen components
 
-- **Knowledge Module** from Hanyang University (Prof. Eun-Sol Kim)
-    - Construction of neuro-symbolic knowledge graph from DramaQA dataset
-    - Example of input/output
-        - Input: Each frame of a video
-            ```bash
-            ["./dramaqa_frames/AnotherMissOh15/003/0080/IMAGE_0000008630.jpg",
-             "./dramaqa_frames/AnotherMissOh15/003/0080/IMAGE_0000008574.jpg",
-             ...
-             "./dramaqa_frames/AnotherMissOh15/003/0080/IMAGE_0000008702.jpg"]
-            ```
-        - Output: Each frame of a video with detected objects and relations (predicates)
-            ```bash
-            ["./dramaqa_frames/AnotherMissOh15/003/0080/IMAGE_0000008630.jpg",
-             "./dramaqa_frames/AnotherMissOh15/003/0080/IMAGE_0000008574.jpg",
-             ...
-             "./dramaqa_frames/AnotherMissOh15/003/0080/IMAGE_0000008702.jpg",
-             ./dramaqa_frames/AnotherMissOh15/003/0080/custom_data_info.json,
-             ./dramaqa_frames/AnotherMissOh15/003/0080/custom_prediction.json,]
-            ```
-            - ```custom_data_info.json``` contains classes of both objects and predicates
-            - ```custom_prediction.json``` contains bounding boxes of obect, edge labels, and scores of predicted predicates
-    - Repo.: https://github.com/youngyoung1021/scene_graph_extract
+| Path | Owner / institution | Upstream | Commit |
+| --- | --- | --- | --- |
+| `LBA-ARVQA` | hee-suk-yoon / KAIST | <https://github.com/hee-suk-yoon/LBA-ARVQA> | `e7d34c0ed94b7a5d7698bc5e56caee64e098a800` |
+| `LBA-DramaQG` | gminipark / Kyung Hee University | <https://github.com/gminipark/LBA-DramaQG> | `1ba4b00eafbdbc42ac234a01f61b25889d67a99b` |
 
-- **Out-of-Distribution (OOD) Detection Module** from KAIST (Prof. Chang-Dong Yoo and Prof. Junmo Kim)
-    - Prof. Chang-Dong Yoo: Anserability Reasoning submodule
-        - Inference of answerability reasoning from the question given an image
-        - Example of input/output
-        
-        - Repo.: https://github.com/tomyoon2/LBA-ARVQA
+The integration also retains the 2022 references for `DramaQA`
+(`643db2beb8e19f46c872ecb14a878add7f183ea3`), `ood-diffusion`
+(`72f0cddb675ce62a78f88bede0588ba63ad09c3`), and
+`Scene-Graph-Extraction` (`8e63c7ded8adc2312b47007593b15d2a499ce9cd`).
+The last upstream URL is a historical reference and is no longer publicly
+cloneable.
 
-    - Prof. Junmo Kim: OOD diffusion
-        - Calculation of OOD diffusion score from a given image
-        - Example of input/output
-            - Input: Each frame of a video 
-                ```bash
-                {
-                    "train_images": [
-                        "./dramaqa_frames/AnotherMissOh15/003/0080/IMAGE_0000008630.jpg",
-                        "./dramaqa_frames/AnotherMissOh15/003/0080/IMAGE_0000008574.jpg",
-                        ...
-                        "./dramaqa_frames/AnotherMissOh15/003/0080/IMAGE_0000008702.jpg",
-                    ],
-                    "test_images": [
-                        "./dramaqa_frames/AnotherMissOh17/005/0085/IMAGE_0000008574.jpg"
-                    ]
-                }
-                ```
-            - Output: Score of Out-of-Distribution (OOD) diffusion
-                ```bash
-                {
-                    "./dramaqa_frames/AnotherMissOh17/005/0085/IMAGE_0000008521.jpg": 0.7401852011680603
-                }
-                ```
-        - Repo.: https://github.com/hushon/ood-diffusion
-    
-- **Question Generation Module** from Kyunghee University (Prof. Seong-Bae Park)
-    - Generating (sub)-questions based on OOD information
-    - Example of input/output
-        - Input: 
-            ```bash
-            [{
-                "vid" : AnotherMissOh14_001_0000,
-                "False_promise" : "Haeyoung1 and Dokyung are in love and the two went through many things before starting to date."
-            }]
-            ```
-        - Output
-            ```bash
-            [{"question" : "How did Haeyoung1 feel when Haeyoung1 was with Dokyung?"}]
-            ```
-    - Repo.: https://github.com/gminipark/LBA-DramaQG
+The root integration is MIT licensed. `LBA-DramaQG` declares MIT; the ARVQA
+snapshot has no root license file, so consult its owner before reuse.
 
-
-- **Oracle Module** from Seoul National University (Prof. Byoung-Tak Zhang & Minsu Lee)
-    - Take answers for (sub)-questions from oracle module & utilize answers and knowledge systems to select appropriate responses to VideoQA's questions
-    - Example of input/output
-        - Input: 
-            ```bash
-            [{"question" : "How did Haeyoung1 feel when Haeyoung1 was with Dokyung?"}]
-            ```
-        - Output
-            ```bash
-            [{"answer_from_oracle" : "Happy"}]
-            ```
-    - Repo.: https://github.com/greeksharifa/LBA_integration/oracle_module
-
----
-
-# Installation
+## Setup
 
 ```bash
-git clone --recurse-submodules https://github.com/greeksharifa/LBA_Integration.git
-
+git clone --branch 2023 --recurse-submodules \
+  https://github.com/greeksharifa/LBA_Integration.git
+cd LBA_Integration
+git submodule update --init --recursive
 ```
 
-## Update submodules
-```bash
-# in root directory
-git submodule update --remote scene_graph_extract
-git submodule update --remote LBA-ARVQA
-git submodule update --remote ood-diffusion
-git submodule update --remote LBA-DramaQG
-git submodule update --remote DramaQA
-```
+The integration expects datasets, model weights, checkpoints, generated
+datasets, and results to be supplied separately. They are intentionally not
+versioned. If recursive initialization reaches the unavailable historical
+`Scene-Graph-Extraction` URL, initialize the other paths individually.

@@ -1,6 +1,6 @@
 [submodule "LBA-ARVQA"]
 	path = LBA-ARVQA
-	url = https://github.com/tomyoon2/LBA-ARVQA.git
+	url = https://github.com/hee-suk-yoon/LBA-ARVQA.git
 [submodule "ood-diffusion"]
 	path = ood-diffusion
 	url = https://github.com/hushon/ood-diffusion.git
