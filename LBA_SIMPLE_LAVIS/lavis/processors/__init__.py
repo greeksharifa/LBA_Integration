@@ -7,6 +7,11 @@
 
 from lavis.processors.base_processor import BaseProcessor
 
+from lavis.processors.alpro_processors import (
+    AlproVideoTrainProcessor,
+    AlproVideoEvalProcessor,
+)
+
 from lavis.processors.blip_processors import (
     BlipImageTrainProcessor,
     Blip2ImageTrainProcessor,
@@ -18,6 +23,9 @@ from lavis.common.registry import registry
 
 __all__ = [
     "BaseProcessor",
+    # ALPRO
+    "AlproVideoTrainProcessor",
+    "AlproVideoEvalProcessor",
     # BLIP
     "BlipImageTrainProcessor",
     "Blip2ImageTrainProcessor",
