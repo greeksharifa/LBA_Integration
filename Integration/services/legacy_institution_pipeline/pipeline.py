@@ -1,7 +1,6 @@
 """Routing for the clean-room institution service contract."""
 
 import json
-from collections.abc import Mapping
 from typing import Any, Protocol
 
 from .clients import ClientFactory, GradioPredictor
@@ -28,10 +27,13 @@ class LegacyInstitutionPipeline:
     def run(self, qid: Any) -> dict[str, Any]:
         answerability_value = self.answerability_predictor.predict(str(qid))
         normalized = parse_answerability(answerability_value)
-        question_value = self.question_predictor.predict(json.dumps(normalized))
-        if not isinstance(question_value, Mapping):
-            raise ValueError("question service response must be a mapping")
-        return dict(question_value)
+        question_value = self.question_predictor.predict(
+            json.dumps(normalized, ensure_ascii=False)
+        )
+        return {
+            "answerability": normalized,
+            "sub_question": str(question_value),
+        }
 
     @classmethod
     def from_settings(

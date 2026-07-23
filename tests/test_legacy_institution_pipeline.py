@@ -72,8 +72,12 @@ def test_pipeline_routes_normalized_answerability_json_to_question_service():
             self.payloads.append(payload)
             return self.result
 
-    answerability = RecordingPredictor([ANSWERABILITY])
-    question_result = {"question": "What happens next?"}
+    localized_answerability = {
+        **ANSWERABILITY,
+        "question": "누가 말하고 있나요?",
+    }
+    answerability = RecordingPredictor([localized_answerability])
+    question_result = "다음 장면은?"
     question = RecordingPredictor(question_result)
     pipeline = LegacyInstitutionPipeline(answerability, question)
 
@@ -81,12 +85,15 @@ def test_pipeline_routes_normalized_answerability_json_to_question_service():
 
     assert answerability.payloads == ["7"]
     assert len(question.payloads) == 1
-    assert json.loads(question.payloads[0]) == ANSWERABILITY
-    assert result == question_result
-    assert result is not question_result
+    assert "누가 말하고 있나요?" in question.payloads[0]
+    assert json.loads(question.payloads[0]) == localized_answerability
+    assert result == {
+        "answerability": localized_answerability,
+        "sub_question": question_result,
+    }
 
 
-def test_pipeline_rejects_non_mapping_question_result():
+def test_pipeline_stringifies_any_question_service_result():
     class Predictor:
         def __init__(self, result):
             self.result = result
@@ -99,8 +106,10 @@ def test_pipeline_rejects_non_mapping_question_result():
         Predictor(["not", "a", "mapping"]),
     )
 
-    with pytest.raises(ValueError, match="question service"):
-        pipeline.run("q1")
+    assert pipeline.run("q1") == {
+        "answerability": ANSWERABILITY,
+        "sub_question": "['not', 'a', 'mapping']",
+    }
 
 
 def test_settings_have_loopback_defaults(monkeypatch):
@@ -193,7 +202,7 @@ def test_from_settings_wires_endpoints_and_api_names_to_client_factory():
             prediction_calls.append((self.endpoint, payload, api_name))
             if self.endpoint.endswith(":8001"):
                 return ANSWERABILITY
-            return {"generated": "question"}
+            return "generated question"
 
     def client_factory(endpoint):
         client_calls.append(endpoint)
@@ -211,7 +220,10 @@ def test_from_settings_wires_endpoints_and_api_names_to_client_factory():
     )
 
     assert client_calls == []
-    assert pipeline.run(42) == {"generated": "question"}
+    assert pipeline.run(42) == {
+        "answerability": ANSWERABILITY,
+        "sub_question": "generated question",
+    }
     assert client_calls == [
         "http://127.0.0.1:8001",
         "http://127.0.0.1:8002",

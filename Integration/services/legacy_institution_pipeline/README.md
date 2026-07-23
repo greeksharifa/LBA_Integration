@@ -17,9 +17,10 @@ service. That service must return a mapping, a one-element list containing a
 mapping, or a JSON encoding of either form. The normalized mapping must include
 `qid`, `question`, `prediction`, and `vid`.
 
-The pipeline JSON-encodes the normalized mapping and submits it to the question
-service. The question service must return a mapping; the pipeline returns a new
-dictionary containing that result. Invalid response shapes raise `ValueError`.
+The pipeline JSON-encodes the normalized mapping without ASCII escaping and
+submits it to the question service. It accepts any question-service response
+and returns `{"answerability": normalized, "sub_question": str(response)}`.
+Invalid answerability response shapes raise `ValueError`.
 
 ```python
 from Integration.services.legacy_institution_pipeline import (
