@@ -363,6 +363,8 @@ class BlipVideoEvalProcessor(BlipVideoBaseProcessor):
         self.n_frms = n_frms
 
     def __call__(self, vpath, clip_proposal=None):
+        from colors import print_color, Colors
+        print_color(f'self.n_frms: {self.n_frms}', color=Colors.BRIGHT_YELLOW) # maybe 4
         clip, indices, fps = load_video(
             video_path=vpath,
             n_frms=self.n_frms,

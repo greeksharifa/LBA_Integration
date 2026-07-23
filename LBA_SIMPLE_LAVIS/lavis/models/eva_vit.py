@@ -196,6 +196,7 @@ class PatchEmbed(nn.Module):
         self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_size)
 
     def forward(self, x, **kwargs):
+        # print('eva_vit.py line 199 x.shape:', x.shape) # x.shape: torch.Size([2, 32, 3, 224, 224])
         B, C, H, W = x.shape
         # FIXME look at relaxing size constraints
         assert H == self.img_size[0] and W == self.img_size[1], \

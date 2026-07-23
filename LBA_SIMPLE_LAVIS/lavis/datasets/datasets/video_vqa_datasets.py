@@ -344,11 +344,21 @@ class DramaQASQDataset(VideoQADataset, __DisplMixin):
         random.shuffle(shot_anns)
         
         image_path_list = shot_anns[0]["image_path_list"]
+        print_color(msg="image_path_list: {}".format(image_path_list), color=Colors.BRIGHT_GREEN)
         
         # TODO: 경로 수정
         vname = ann["vid"] # AnotherMissOh17_001_0000
         
-        # 1
+        # 0 (video) # AnotherMissOh08_012_0332.mp4
+        # video_path = f'/data1/AnotherMissOh/AnotherMissOh_videos/total/{vname}.mp4'
+        # print_color(msg="video_path: {}".format(video_path), color=Colors.BRIGHT_RED)
+        # frms = self.vis_processor(video_path)
+        # # frms, indices, fps = self.vis_processor(video_path)
+        # # frms = frms.permute(1, 0, 2, 3)
+        # # assert len(frms) == self.vis_processor.n_frms
+        # print_color(msg=f"video_vqa_datasets.py frms: {type(frms)} {frms.shape}", color=Colors.BRIGHT_RED)
+        
+        # 1 (image)
         image_path = random.choice(image_path_list)
         image = Image.open(image_path).convert("RGB")
         image = self.vis_processor(image)

@@ -293,6 +293,8 @@ class Blip2VicunaInstructSQ(Blip2VicunaInstruct):
                 print(*zip(answer_candidate, score))
 
                 for batch_index in range(bs):
+                    print(len(answer_candidate), len(score), len(optimal_scores), len(main_answers), sep='\t')
+                    print(batch_index, bs)
                     if score[batch_index] < optimal_scores[batch_index]:
                         main_answers[batch_index] = answer_candidate[batch_index]
                         optimal_scores[batch_index] = score[batch_index]

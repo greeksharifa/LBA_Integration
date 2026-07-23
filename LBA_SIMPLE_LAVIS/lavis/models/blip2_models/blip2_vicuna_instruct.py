@@ -301,6 +301,10 @@ class Blip2VicunaInstruct(Blip2Base):
             prompt = self.prompt
 
         image = samples["image"]
+        print_color(f'image.shape: {image.shape}', color=Colors.GREEN)
+        print_color(f'max_length: {max_length}', color=Colors.GREEN)
+        print_color(f'min_length: {min_length}', color=Colors.GREEN)
+        
         
         bs = image.size(0)
 
@@ -332,12 +336,15 @@ class Blip2VicunaInstruct(Blip2Base):
         # For video data
         # print_color(msg="image.shape: {}".format(image.shape), color=Colors.BRIGHT_RED)
         # VQA-Introspect: 1, 3, 224, 224
+        # Drama Video: [8, 32, 3, 224, 224] = [bsz, num_frms, num_channel, height, width]
         if image.dim() == 5:
             inputs_llm, atts_llm = [], []
-            for j in range(image.size(2)):
-                this_frame = image[:,:,j,:,:]
+            for j in range(image.size(1)):
+                this_frame = image[:,j,:,:,:]
                 with self.maybe_autocast():
                     frame_embeds = self.ln_vision(self.visual_encoder(this_frame))
+                    # RuntimeError: Given groups=1, weight of size [1408, 3, 14, 14], 
+                    # expected input[8, 32, 224, 224] to have 3 channels, but got 32 channels instead
                 frame_atts = torch.ones(frame_embeds.size()[:-1], dtype=torch.long).to(image.device)
 
                 if self.qformer_text_input:
@@ -406,7 +413,8 @@ class Blip2VicunaInstruct(Blip2Base):
                 top_p=top_p,
                 temperature=temperature,
                 num_beams=num_beams,
-                max_length=max_length,
+                max_length=max_length+1024,
+                max_new_tokens=200,
                 min_length=min_length,
                 # eos_token_id=self.eos_token_id,
                 # eos_token_id=self.llm_tokenizer.eos_token_id,

@@ -10,6 +10,7 @@ model:
   load_finetuned: True
   use_grad_checkpoint: True
   freeze_vit: True
+  frame_num: 4
 
   num_sub_questions: 2
   return_sub_qa: True
@@ -20,11 +21,13 @@ datasets:
     #class VQAIntrospectQARCapBuilder(BaseDatasetBuilder):
     #     ...
     vis_processor:
-        train:
-          name: "blip2_image_train"
-          image_size: 224 #364
+        # train:
+          # name: "blip2_image_train"
+          # image_size: 224 #364
         eval:
-          name: "blip_image_eval"
+          # name: "blip_video_eval"
+          name: "alpro_video_eval"
+          n_frms: 32
           image_size: 224 #364
     text_processor:
         train:
@@ -58,7 +61,7 @@ run:
   weight_decay: 0.05
   max_epoch: 10
   batch_size_train: 8
-  batch_size_eval: 1
+  batch_size_eval: 2
   num_workers: 0
   accum_grad_iters: 16
   prompt: "{}"
