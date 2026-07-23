@@ -22,13 +22,34 @@ cloneable.
 The root integration is MIT licensed. `LBA-DramaQG` declares MIT; the ARVQA
 snapshot has no root license file, so consult its owner before reuse.
 
+## Growing Knowledge history
+
+The complete history from
+<https://github.com/greeksharifa/LBA_Growing_Knowledge.git> is preserved as a
+non-squash subtree at the fixed source tip
+`e78d039a46c4ce772117780455e7d2c9d56313f5`. Its source tree is scoped under
+`LBA_Growing_Knowledge/`; files outside that prefix belong to this integration
+repository.
+
+The subtree retains its original nested `.gitmodules` file unchanged. The root
+`.gitmodules` additionally declares all seven prefixed gitlinks, including
+`baseline_models/PSAC`, so they can be initialized from this repository.
+
 ## Setup
 
 ```bash
 git clone --branch 2023 --recurse-submodules \
   https://github.com/greeksharifa/LBA_Integration.git
 cd LBA_Integration
+git submodule sync --recursive
 git submodule update --init --recursive
+```
+
+To initialize only the Growing Knowledge subtree and its nested dependencies:
+
+```bash
+git submodule sync --recursive
+git submodule update --init --recursive -- LBA_Growing_Knowledge
 ```
 
 The integration expects datasets, model weights, checkpoints, generated

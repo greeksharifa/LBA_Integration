@@ -13,3 +13,24 @@
 [submodule "DramaQA"]
 	path = DramaQA
 	url = https://github.com/liveseongho/DramaQA.git
+[submodule "LBA_Growing_Knowledge/AGQA_baselines_code"]
+	path = LBA_Growing_Knowledge/AGQA_baselines_code
+	url = https://github.com/madeleinegrunde/AGQA_baselines_code.git
+[submodule "LBA_Growing_Knowledge/ActionGenome"]
+	path = LBA_Growing_Knowledge/ActionGenome
+	url = https://github.com/JingweiJ/ActionGenome.git
+[submodule "LBA_Growing_Knowledge/ChatCaptioner"]
+	path = LBA_Growing_Knowledge/ChatCaptioner
+	url = https://github.com/Vision-CAIR/ChatCaptioner.git
+[submodule "LBA_Growing_Knowledge/STAR_Benchmark"]
+	path = LBA_Growing_Knowledge/STAR_Benchmark
+	url = https://github.com/csbobby/STAR_Benchmark.git
+[submodule "LBA_Growing_Knowledge/baseline_models/HME-VideoQA"]
+	path = LBA_Growing_Knowledge/baseline_models/HME-VideoQA
+	url = https://github.com/fanchenyou/HME-VideoQA.git
+[submodule "LBA_Growing_Knowledge/baseline_models/PSAC"]
+	path = LBA_Growing_Knowledge/baseline_models/PSAC
+	url = https://github.com/lixiangpengcs/PSAC.git
+[submodule "LBA_Growing_Knowledge/baseline_models/hcrn-videoqa"]
+	path = LBA_Growing_Knowledge/baseline_models/hcrn-videoqa
+	url = https://github.com/thaolmk54/hcrn-videoqa.git
