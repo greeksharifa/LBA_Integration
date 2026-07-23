@@ -1,0 +1,198 @@
+{
+  "YSKX3-8": {
+    "question": "Were they interacting with a blanket while holding a pillow?",
+    "answer": "no",
+    "video_id": "YSKX3",
+    "global": [
+      "exists"
+    ],
+    "local": "yes-no-o4-while-c076",
+    "ans_type": "binary",
+    "steps": 3,
+    "semantic": "object",
+    "structural": "verify",
+    "novel_comp": 0,
+    "more_steps": 0,
+    "program": "Exists(blanket, Iterate(Localize(while, holding a pillow), Filter(frame, [objects])))",
+    "sg_grounding": {
+      "27-36": [],
+      "43-59": [
+        "c076/1"
+      ],
+      "37-59": [
+        "000247",
+        "000252",
+        "000254",
+        "000258",
+        "000268",
+        "000269",
+        "000270"
+      ]
+    },
+    "nc_seq": 0,
+    "nc_sup": 0,
+    "nc_dur": 0,
+    "nc_objrel": 0,
+    "indirect": 1,
+    "i_obj": 0,
+    "i_rel": 0,
+    "i_act": 0,
+    "i_temp": 1,
+    "direct_equiv": "YSKX3-9"
+  },
+  "YSKX3-9": {
+    "question": "Was a blanket one of the things they were interacting with?",
+    "answer": "yes",
+    "video_id": "YSKX3",
+    "global": [
+      "exists"
+    ],
+    "local": "yes-no-o4-all-",
+    "ans_type": "binary",
+    "steps": 1,
+    "semantic": "object",
+    "structural": "verify",
+    "novel_comp": 0,
+    "more_steps": 0,
+    "program": "Exists(blanket, Iterate(video, Filter(frame, [objects])))",
+    "sg_grounding": {
+      "4-13": [
+        "o4/000209",
+        "o4/000223",
+        "o4/000105",
+        "o4/000134",
+        "o4/000192",
+        "o4/000163",
+        "o4/000224"
+      ],
+      "57-57": [
+        "000105",
+        "000134",
+        "000163",
+        "000192",
+        "000205",
+        "000209",
+        "000221",
+        "000223",
+        "000224",
+        "000235",
+        "000237",
+        "000239",
+        "000247",
+        "000252",
+        "000254",
+        "000258",
+        "000268",
+        "000269",
+        "000270"
+      ]
+    },
+    "nc_seq": 0,
+    "nc_sup": 0,
+    "nc_dur": 0,
+    "nc_objrel": 0,
+    "indirect": 0,
+    "i_obj": 0,
+    "i_rel": 0,
+    "i_act": 0,
+    "i_temp": 0,
+    "direct_equiv": "YSKX3-9"
+  },
+  "YSKX3-11": {
+    "question": "Is there a pillow the person interacts with after tidying up a blanket?",
+    "answer": "yes",
+    "video_id": "YSKX3",
+    "global": [
+      "exists"
+    ],
+    "local": "yes-no-o26-after-c075",
+    "ans_type": "binary",
+    "steps": 3,
+    "semantic": "object",
+    "structural": "verify",
+    "novel_comp": 0,
+    "more_steps": 0,
+    "program": "Exists(pillow, Iterate(Localize(after, tidying up a blanket), Filter(frame, [objects])))",
+    "sg_grounding": {
+      "9-17": [
+        "o26/000254",
+        "o26/000237",
+        "o26/000239",
+        "o26/000269",
+        "o26/000270",
+        "o26/000258",
+        "o26/000268",
+        "o26/000252",
+        "o26/000247"
+      ],
+      "50-70": [
+        "c075/1"
+      ],
+      "44-70": [
+        "000237",
+        "000239",
+        "000247",
+        "000252",
+        "000254",
+        "000258",
+        "000268",
+        "000269",
+        "000270"
+      ]
+    },
+    "nc_seq": 0,
+    "nc_sup": 0,
+    "nc_dur": 0,
+    "nc_objrel": 0,
+    "indirect": 1,
+    "i_obj": 0,
+    "i_rel": 0,
+    "i_act": 0,
+    "i_temp": 1,
+    "direct_equiv": "YSKX3-13"
+  },
+  "LSKA2-2205": {
+    "question": "Was the person walking something before or after taking the object they were on the side of first from somewhere?",
+    "answer": "after",
+    "video_id": "LSKA2",
+    "global": [
+      "rel-act",
+      "sequencing"
+    ],
+    "local": "before-after-v029-c063-all-",
+    "ans_type": "binary",
+    "steps": 6,
+    "semantic": "relation",
+    "structural": "compare",
+    "novel_comp": 1,
+    "more_steps": 1,
+    "program": "Compare([before, after], Exists(walking, Iterate(Localize(temporal tag, ToAction(taking, Query(class, OnlyItem(IterateUntil(forward, video, Exists(on the side of, Filter(frame, [relations])), Filter(frame, [relations, on the side of, objects])))))), Filter(frame, [relations]))))",
+    "sg_grounding": {
+      "15-22": [
+        "v029/000811",
+        "v029/000813",
+        "v029/000828",
+        "v029/000844",
+        "v029/000860",
+        "v029/000875"
+      ],
+      "56-97": [
+        "o17/000330"
+      ],
+      "49-112": [
+        "c063/1"
+      ]
+    },
+    "nc_seq": 1,
+    "nc_sup": 0,
+    "nc_dur": 0,
+    "nc_objrel": 0,
+    "indirect": 1,
+    "i_obj": 1,
+    "i_rel": 0,
+    "i_act": 0,
+    "i_temp": 0,
+    "direct_equiv": "LSKA2-2198"
+  }
+}
+}

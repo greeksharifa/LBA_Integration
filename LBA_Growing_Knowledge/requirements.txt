@@ -1,0 +1,12 @@
+spacy
+
+torch
+torchmetrics
+
+accelerate
+chardet
+cchardet
+transformers
+sentence_transformers
+
+openai

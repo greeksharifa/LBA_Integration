@@ -1,0 +1,18 @@
+[submodule "AGQA_baselines_code"]
+	path = AGQA_baselines_code
+	url = https://github.com/madeleinegrunde/AGQA_baselines_code.git
+[submodule "ActionGenome"]
+	path = ActionGenome
+	url = https://github.com/JingweiJ/ActionGenome.git
+[submodule "STAR_Benchmark"]
+	path = STAR_Benchmark
+	url = https://github.com/csbobby/STAR_Benchmark.git
+[submodule "baseline_models/hcrn-videoqa"]
+	path = baseline_models/hcrn-videoqa
+	url = https://github.com/thaolmk54/hcrn-videoqa.git
+[submodule "baseline_models/HME-VideoQA"]
+	path = baseline_models/HME-VideoQA
+	url = https://github.com/fanchenyou/HME-VideoQA.git
+[submodule "ChatCaptioner"]
+	path = ChatCaptioner
+	url = https://github.com/Vision-CAIR/ChatCaptioner.git
