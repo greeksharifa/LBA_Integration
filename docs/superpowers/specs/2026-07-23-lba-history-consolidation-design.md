@@ -69,7 +69,7 @@ LBA_Growing_Knowledge/ActionGenome
   db36ffb56dfc0e78af82147af9712e870c5bfea7
 LBA_Growing_Knowledge/ChatCaptioner
   https://github.com/Vision-CAIR/ChatCaptioner.git
-  e4c63eeedaa40fceac52ef6a5553e2d6d9bc804
+  e4c63eeedaa40fceac52ef6a555a9ae608feaa81
 LBA_Growing_Knowledge/STAR_Benchmark
   https://github.com/csbobby/STAR_Benchmark.git
   6db9d158585cb78372107dba72fedcd6b41a63e0
@@ -90,6 +90,9 @@ and submodule initialization instructions.
 ## Error Handling
 
 - Abort if any source tip differs from the investigated SHA.
+- Abort unless `LBA_Integration_2022` still has exactly the five manifested
+  heads and no tags; newly added or removed source refs require a new manifest
+  and design review before integration.
 - Abort if target `2023` is not fast-forwardable from the fetched remote.
 - Do not resolve collisions by dropping source files.
 - Do not update `main`, `2022`, or `2024` while integrating the 2023 snapshot.
@@ -100,6 +103,8 @@ and submodule initialization instructions.
 
 - `git ls-remote` reports each of the five namespaced refs at the exact
   manifest SHA, not merely at a descendant.
+- Source `git ls-remote --heads --tags` matches exactly the five manifested
+  heads and an empty tag set.
 - Source `subtask3` SHA `5268982` resolves in the target.
 - All 16 `LBA_Growing_Knowledge` commits are ancestors of target `2023`.
 - Prefix-stripped source and imported file trees match byte-for-byte,
