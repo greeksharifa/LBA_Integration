@@ -31,4 +31,11 @@ def parse_answerability(value: Any) -> dict[str, Any]:
             "answerability response is missing required field(s): "
             + ", ".join(missing)
         )
+
+    try:
+        json.dumps(normalized, ensure_ascii=False)
+    except (TypeError, ValueError, OverflowError) as error:
+        raise ValueError(
+            "answerability response must be entirely JSON-serializable"
+        ) from error
     return normalized

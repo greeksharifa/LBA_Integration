@@ -7,15 +7,22 @@ copy or provide an ARVQA model implementation.
 
 The package contains no datasets, checkpoints, model weights, or model
 implementations. Deployments must supply those assets to their independently
-operated services. When KHU-derived integration behavior is redistributed, the
-applicable upstream MIT copyright and permission notice must be preserved.
+operated services. The KHU DramaQG integration lineage is covered by the
+upstream MIT notice in
+[`UPSTREAM_LICENSE_KHU_DRAMAQG.txt`](UPSTREAM_LICENSE_KHU_DRAMAQG.txt),
+preserved from the archived upstream project. That notice applies to
+KHU-derived DramaQG integration behavior, not to unrelated components or to
+this package as a claim of copied model implementation.
 
 ## Contract
 
 `LegacyInstitutionPipeline.run(qid)` sends `str(qid)` to the answerability
 service. That service must return a mapping, a one-element list containing a
 mapping, or a JSON encoding of either form. The normalized mapping must include
-`qid`, `question`, `prediction`, and `vid`.
+the keys `qid`, `question`, `prediction`, and `vid`. The contract requires key
+presence but does not impose narrower value types: all values, nested values,
+extra keys, and mapping keys must be JSON-serializable. Extra keys are
+preserved.
 
 The pipeline JSON-encodes the normalized mapping without ASCII escaping and
 submits it to the question service. It accepts any question-service response
@@ -34,9 +41,13 @@ pipeline = LegacyInstitutionPipeline.from_settings(
 result = pipeline.run("question-7")
 ```
 
-The Gradio runtime dependency is loaded only when a request is first sent, so
-contract consumers and unit tests can import this package without installing
-`gradio_client`.
+`gradio_client` is an optional runtime dependency. It is loaded only when a
+request is first sent, so contract consumers and unit tests can import this
+package without it. Install it before calling an actual endpoint:
+
+```console
+python -m pip install gradio_client
+```
 
 ## Configuration
 

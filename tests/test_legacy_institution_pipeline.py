@@ -62,6 +62,16 @@ def test_parse_answerability_requires_contract_fields(missing_key):
         parse_answerability(value)
 
 
+def test_parse_answerability_rejects_non_json_serializable_extra_values():
+    value = {
+        **ANSWERABILITY,
+        "metadata": {"unsupported": object()},
+    }
+
+    with pytest.raises(ValueError, match="JSON-serializable"):
+        parse_answerability(value)
+
+
 def test_pipeline_routes_normalized_answerability_json_to_question_service():
     class RecordingPredictor:
         def __init__(self, result):
@@ -181,6 +191,51 @@ def test_settings_reject_invalid_urls(monkeypatch, value):
 
     with pytest.raises(ValueError, match="LBA_ARVQA_URL"):
         PipelineSettings.from_environment()
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("answerability_url", " http://127.0.0.1:7868"),
+        ("answerability_url", "http://127.0.0.1:7868 "),
+        ("answerability_url", "http://local host:7868"),
+        ("answerability_url", "http://127.0.0.1:\t7868"),
+        ("answerability_url", "http://127.0.0.1\\service"),
+        ("answerability_url", "127.0.0.1:7868"),
+        ("answerability_url", "http:///service"),
+        ("answerability_url", "http://user@example.test"),
+        ("answerability_url", "http://example.test:"),
+        ("answerability_url", "http://example.test:not-a-port"),
+        ("question_url", "https://example.test:65536"),
+    ],
+)
+def test_settings_reject_malformed_service_urls(field, value):
+    with pytest.raises(ValueError, match=field):
+        PipelineSettings(**{field: value})
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("answerability_api_name", ""),
+        ("answerability_api_name", "predict"),
+        ("answerability_api_name", " /predict"),
+        ("answerability_api_name", "/pre dict"),
+        ("answerability_api_name", "/predict\n"),
+        ("question_api_name", "/generate\\question"),
+        ("question_api_name", "/generate\x00question"),
+        ("question_api_name", "/generate\x80question"),
+    ],
+)
+def test_settings_reject_invalid_api_names(field, value):
+    with pytest.raises(ValueError, match=field):
+        PipelineSettings(**{field: value})
+
+
+def test_settings_accept_valid_ipv6_loopback_url():
+    settings = PipelineSettings(answerability_url="http://[::1]:7868")
+
+    assert settings.answerability_url == "http://[::1]:7868"
 
 
 def test_pipeline_settings_are_frozen():
