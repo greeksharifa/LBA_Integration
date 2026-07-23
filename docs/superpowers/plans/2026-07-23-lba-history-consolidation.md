@@ -305,3 +305,12 @@ test "$(git -C "$lba_verification_dir/LBA_Integration" \
   ls-files --stage LBA_Growing_Knowledge | rg '^160000' | wc -l |
   tr -d ' ')" = 7
 ```
+## Execution exception: preserved source whitespace
+
+The whole-range check `git diff --check origin/2023..HEAD` reports only
+pre-existing trailing whitespace and blank-at-EOF findings below the
+source-owned `LBA_Growing_Knowledge/` prefix. Those bytes must remain unchanged
+so the imported prefix stays tree-identical to source tip
+`e78d039a46c4ce772117780455e7d2c9d56313f5`. The integration-owned scope is
+validated instead with
+`git diff --check origin/2023..HEAD -- . ':(exclude)LBA_Growing_Knowledge'`.
