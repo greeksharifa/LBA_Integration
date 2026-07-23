@@ -95,6 +95,9 @@ gh api repos/greeksharifa/LBA_Prototypes
 gh api repos/greeksharifa/LBA_Prototypes/branches --paginate
 gh api repos/greeksharifa/LBA_Prototypes/tags --paginate
 gh api repos/greeksharifa/LBA_Prototypes/releases --paginate
+gh api repos/greeksharifa/LBA_Prototypes \
+  | jq -S -c '{created_at,full_name,id,node_id}' \
+  > /tmp/lba-prototypes-identity.before
 git ls-remote https://github.com/greeksharifa/LBA_Prototypes.git
 git clone --mirror https://github.com/greeksharifa/LBA_Prototypes.git \
   /tmp/lba-prototypes-inventory.git
@@ -131,6 +134,11 @@ Write the exact API/ref/LFS results and these classifications to
 these exact machine-readable lines, substituting the observed numeric counts:
 
 ```text
+repository_id: 1309374491
+repository_node_id: R_kgDOTgt4Gw
+repository_full_name: greeksharifa/LBA_Prototypes
+repository_created_at: 2026-07-23T00:30:07Z
+captured_at: 2026-07-23T04:47:01Z
 default_branch: main
 main: ea8f12c634bdee7908937a4b1f4cda2e458ea009 | incorporated into LBA_Integration provenance
 arvqa-answerability-demo: f572aa4d80d432f1642507f6d90de0edbe0abf9f | superseded by clean-room API contract
@@ -820,12 +828,17 @@ git -C /tmp/lba-prototypes-inventory.git lfs ls-files --all | sort \
   > /tmp/lba-prototypes-lfs.live
 gh api repos/greeksharifa/LBA_Prototypes --jq .default_branch \
   > /tmp/lba-prototypes-default-branch.live
+gh api repos/greeksharifa/LBA_Prototypes \
+  | jq -S -c '{created_at,full_name,id,node_id}' \
+  > /tmp/lba-prototypes-identity.live
 cmp /tmp/lba-prototypes-refs.before /tmp/lba-prototypes-refs.live
 cmp /tmp/lba-prototypes-tags.before /tmp/lba-prototypes-tags.live
 cmp /tmp/lba-prototypes-releases.before /tmp/lba-prototypes-releases.live
 cmp /tmp/lba-prototypes-lfs.before /tmp/lba-prototypes-lfs.live
 cmp /tmp/lba-prototypes-default-branch.before \
   /tmp/lba-prototypes-default-branch.live
+cmp /tmp/lba-prototypes-identity.before \
+  /tmp/lba-prototypes-identity.live
 test "$(git -C /tmp/lba-prototypes-inventory.git rev-parse refs/heads/main)" = \
   ea8f12c634bdee7908937a4b1f4cda2e458ea009
 test "$(git -C /tmp/lba-prototypes-inventory.git rev-parse \
@@ -852,6 +865,14 @@ prototype_manifest=/home/ywjang/LBA/LBA_Integration/docs/provenance/LBA_Prototyp
 prototype_tag_count="$(wc -l < /tmp/lba-prototypes-tags.live)"
 prototype_release_count="$(wc -l < /tmp/lba-prototypes-releases.live)"
 prototype_lfs_count="$(wc -l < /tmp/lba-prototypes-lfs.live)"
+rg -F -x 'repository_id: 1309374491' "$prototype_manifest"
+rg -F -x 'repository_node_id: R_kgDOTgt4Gw' "$prototype_manifest"
+rg -F -x 'repository_full_name: greeksharifa/LBA_Prototypes' "$prototype_manifest"
+rg -F -x 'repository_created_at: 2026-07-23T00:30:07Z' "$prototype_manifest"
+rg -F -x 'captured_at: 2026-07-23T04:47:01Z' "$prototype_manifest"
+rg -F -x 'deletion_status: already absent before publication' "$prototype_manifest"
+rg -F -x 'deletion_confirmed_at: 2026-07-23T06:45:51Z' "$prototype_manifest"
+rg -F -x 'authenticated_owner_id: 26247624' "$prototype_manifest"
 rg -F -x 'default_branch: main' "$prototype_manifest"
 rg -F -x 'main: ea8f12c634bdee7908937a4b1f4cda2e458ea009 | incorporated into LBA_Integration provenance' "$prototype_manifest"
 rg -F -x 'arvqa-answerability-demo: f572aa4d80d432f1642507f6d90de0edbe0abf9f | superseded by clean-room API contract' "$prototype_manifest"
@@ -869,14 +890,37 @@ present in the pushed Integration docs.
 
 - [ ] **Step 8: Delete `LBA_Prototypes` and verify absence**
 
-Run:
+Already-absent contingency: if the initial inventory was captured successfully,
+but immediately before publication the active authenticated account is the
+repository owner, its numeric owner ID matches the inventory record, the
+owner's repository list contains no `LBA_Prototypes`, the REST API returns 404,
+and Git reports the repository as not found, record
+`deletion_status: already absent before publication` in the provenance
+manifest and do not call any repository-deletion API. This exception applies
+only while no repository with the same full name has been recreated. The
+identity and live inventory comparisons below remain mandatory whenever this
+task performs the deletion itself.
+
+If the repository remains present and the contingency does not apply, run:
 
 ```bash
-gh repo delete greeksharifa/LBA_Prototypes --yes
+prototype_repository_node_id="$(
+  jq -r '.node_id' /tmp/lba-prototypes-identity.before
+)"
+test "$prototype_repository_node_id" = 'R_kgDOTgt4Gw'
+gh api graphql \
+  -f query='mutation($id: ID!) {
+    deleteRepository(input: {repositoryId: $id}) {
+      clientMutationId
+    }
+  }' \
+  -F id="$prototype_repository_node_id"
 gh api repos/greeksharifa/LBA_Prototypes
 ```
 
-Expected: deletion succeeds; the final API call returns 404.
+Expected: either the already-absent contingency is fully evidenced without a
+delete call, or the immutable node-ID-targeted mutation succeeds and the final
+REST API call returns 404.
 
 ## Task 6: Final Verification and Worktree Cleanup
 
@@ -892,9 +936,8 @@ unchanged Flipped `master`, and unchanged `fix/khu-integration`.
 Run:
 
 ```bash
-git -C /home/ywjang/LBA/LBA_Integration status --short --branch
-git -C /home/ywjang/LBA/LBA_LAVIS status --short --branch
-git -C /home/ywjang/LBA/Flipped-VQA status --short --branch
+git -C /home/ywjang/LBA/LBA_Integration status --porcelain=v1 -uall \
+  > /tmp/lba-integration-status.after
 git -C /home/ywjang/LBA/LBA_LAVIS status --porcelain=v1 -uall \
   > /tmp/lba-lavis-status.after
 git -C /home/ywjang/LBA/LBA_LAVIS diff --binary \
@@ -903,6 +946,8 @@ git -C /home/ywjang/LBA/Flipped-VQA status --porcelain=v1 -uall \
   > /tmp/lba-flipped-status.after
 git -C /home/ywjang/LBA/Flipped-VQA diff --binary \
   > /tmp/lba-flipped-diff.after
+cmp /tmp/lba-integration-status.before \
+  /tmp/lba-integration-status.after
 cmp /tmp/lba-lavis-status.before /tmp/lba-lavis-status.after
 cmp /tmp/lba-lavis-diff.before /tmp/lba-lavis-diff.after
 cmp /tmp/lba-flipped-status.before /tmp/lba-flipped-status.after

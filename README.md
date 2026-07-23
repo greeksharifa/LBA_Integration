@@ -11,7 +11,17 @@ map and integration baseline.
 | [`2022`](https://github.com/greeksharifa/LBA_Integration/tree/2022) | Exact, history-preserving import of `greeksharifa/LBA_Integration_2022` `main` | Historical snapshot; current scene-graph generation uses the pinned `cross-graph-attention` submodule on `main` |
 | [`2023`](https://github.com/greeksharifa/LBA_Integration/tree/2023) | 2022 architecture with public KAIST ARVQA and KHU DramaQG frozen at the 2023 year-end cutoff | Reproducible snapshot at `ef499a26bd3b371e219abefd8458dd667130854c` |
 | [`2024`](https://github.com/greeksharifa/LBA_Integration/tree/2024) | Current integration tree plus curated SNU/LAVIS video-processing work and public components frozen at the 2024 year-end cutoff | Reproducible snapshot at `f0feea5ffa87db4d23a5f77d75b228cba02cdec1` |
+| [`demo/legacy-institution-pipeline`](https://github.com/greeksharifa/LBA_Integration/tree/demo/legacy-institution-pipeline) | Sanitized legacy KAIST answerability to KHU question-generation service contract and client orchestration | Published at `73e38070bf5f77a3d07dec20fe2e6ac9b8b96415`; contains no copied ARVQA model implementation |
+| [`fix/khu-integration`](https://github.com/greeksharifa/LBA_Integration/tree/fix/khu-integration) | Earlier KHU integration work retained as historical context | Unchanged at `94579e3078c42759b09c12c7cf066b3a04653131`; not folded into the sanitized demo contract |
 | `main` | Canonical navigation and current tracked integration baseline | Active hub; not a dated reproducibility guarantee |
+
+## Related repository branches
+
+| Repository / branch | Purpose | Status |
+| --- | --- | --- |
+| [`LBA_LAVIS:inquirer/data-export-pipeline`](https://github.com/greeksharifa/LBA_LAVIS/tree/inquirer/data-export-pipeline) | Sanitized INQUIRER normalization and data-export pipeline | Published at `d482657b2114acf70ccdc4ec6b59cc868254572f` |
+| [`LBA_LAVIS:inquirer/flipped-vqa-augmentation`](https://github.com/greeksharifa/LBA_LAVIS/tree/inquirer/flipped-vqa-augmentation) | Flipped-VQA augmentation built on the sanitized INQUIRER export branch | Published at `638bcb83a4d9cc26432480622b2982b200622b17` |
+| [`greeksharifa/Flipped-VQA:master`](https://github.com/greeksharifa/Flipped-VQA/tree/master) | Pre-existing fork of `mlvlab/Flipped-VQA` | Retained unchanged at `24b91ea2b3cd21746f9b4ae5767e9fbb9aca406c`; migrated INQUIRER source refs were removed after guarded publication |
 
 ## Ownership and provenance
 
