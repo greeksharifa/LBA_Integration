@@ -111,8 +111,11 @@ and submodule initialization instructions.
   including the nested source `.gitmodules`.
 - Seven root-prefixed submodule declarations resolve to their fixed gitlinks
   in a fresh clone using `git submodule update --init --recursive`.
-- Before and after remote manifests match for all pre-existing refs except
-  `2023`. Fixed baselines include `main=e0d058b9cefa7f880cba357f3de1676d4c803427`,
+- Before and after managed remote manifests (`refs/heads/*` and `refs/tags/*`,
+  excluding server-managed `refs/pull/*`) match for all pre-existing refs
+  except `2023`. The target `main` was independently fast-forwarded during
+  planning and was re-locked at
+  `main=a0f711fb63819a349ee6380c9593afdff09ad54c`,
   `2022=1b1f5d0aa714c412b414ef5718a3e597e4cf44e3`, and
   `2024=f0feea5ffa87db4d23a5f77d75b228cba02cdec1`.
 - `git fsck --full` succeeds.
