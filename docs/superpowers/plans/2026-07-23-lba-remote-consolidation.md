@@ -1015,4 +1015,4 @@ greeksharifa/LBA_LAVIS | inquirer/flipped-vqa-augmentation | LBA/LBA_LAVIS
 ```
 
 Also report that `fix/khu-integration` and the pre-existing Flipped fork were
-preserved, and `LBA_Prototypes` was deleted.
+preserved, that `LBA_Prototypes` was already absent before publication, and that this workflow did not call a repository-deletion API.
