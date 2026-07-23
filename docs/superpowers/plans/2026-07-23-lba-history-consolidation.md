@@ -234,7 +234,7 @@ git commit -m "docs: register growing knowledge submodules"
 
 ```bash
 set -euo pipefail
-git diff --check origin/2023...HEAD
+git diff --check ef499a26bd3b371e219abefd8458dd667130854c..HEAD -- . ':(exclude)LBA_Growing_Knowledge/**'
 git fsck --full
 git merge-base --is-ancestor e78d039a46c4ce772117780455e7d2c9d56313f5 HEAD
 git diff --exit-code \
@@ -307,10 +307,9 @@ test "$(git -C "$lba_verification_dir/LBA_Integration" \
 ```
 ## Execution exception: preserved source whitespace
 
-The whole-range check `git diff --check origin/2023..HEAD` reports only
-pre-existing trailing whitespace and blank-at-EOF findings below the
-source-owned `LBA_Growing_Knowledge/` prefix. Those bytes must remain unchanged
-so the imported prefix stays tree-identical to source tip
-`e78d039a46c4ce772117780455e7d2c9d56313f5`. The integration-owned scope is
-validated instead with
-`git diff --check origin/2023..HEAD -- . ':(exclude)LBA_Growing_Knowledge'`.
+The source-owned `LBA_Growing_Knowledge/` prefix contains pre-existing trailing
+whitespace and blank-at-EOF findings. Those bytes must remain unchanged so the
+imported prefix stays tree-identical to source tip
+`e78d039a46c4ce772117780455e7d2c9d56313f5`. Validate integration-owned
+whitespace against the immutable pre-integration base with
+`git diff --check ef499a26bd3b371e219abefd8458dd667130854c..HEAD -- . ':(exclude)LBA_Growing_Knowledge/**'`.
