@@ -13,6 +13,7 @@ map and integration baseline.
 | [`2024`](https://github.com/greeksharifa/LBA_Integration/tree/2024) | Current integration tree plus curated SNU/LAVIS video-processing work and public components frozen at the 2024 year-end cutoff | Reproducible snapshot at `f0feea5ffa87db4d23a5f77d75b228cba02cdec1` |
 | [`demo/legacy-institution-pipeline`](https://github.com/greeksharifa/LBA_Integration/tree/demo/legacy-institution-pipeline) | Sanitized legacy KAIST answerability to KHU question-generation service contract and client orchestration | Published at `73e38070bf5f77a3d07dec20fe2e6ac9b8b96415`; contains no copied ARVQA model implementation |
 | [`fix/khu-integration`](https://github.com/greeksharifa/LBA_Integration/tree/fix/khu-integration) | Earlier KHU integration work retained as historical context | Unchanged at `94579e3078c42759b09c12c7cf066b3a04653131`; not folded into the sanitized demo contract |
+| [`server-preserve/20261022/lba-integration-local-20260723`](https://github.com/greeksharifa/LBA_Integration/tree/server-preserve/20261022/lba-integration-local-20260723) | Preserves the recovered `LBA_Integration-local-20260723` checkout and its component revisions | Published separately because its `main` history diverged from the current repository `main`; not merged into the canonical baseline |
 | `main` | Canonical navigation and current tracked integration baseline | Active hub; not a dated reproducibility guarantee |
 
 ## Related repository branches
@@ -21,6 +22,7 @@ map and integration baseline.
 | --- | --- | --- |
 | [`LBA_LAVIS:inquirer/data-export-pipeline`](https://github.com/greeksharifa/LBA_LAVIS/tree/inquirer/data-export-pipeline) | Sanitized INQUIRER normalization and data-export pipeline | Published at `d482657b2114acf70ccdc4ec6b59cc868254572f` |
 | [`LBA_LAVIS:inquirer/flipped-vqa-augmentation`](https://github.com/greeksharifa/LBA_LAVIS/tree/inquirer/flipped-vqa-augmentation) | Flipped-VQA augmentation built on the sanitized INQUIRER export branch | Published at `638bcb83a4d9cc26432480622b2982b200622b17` |
+| [`LBA_LAVIS:server-preserve/20261022/lba-lavis-sq-instructblip`](https://github.com/greeksharifa/LBA_LAVIS/tree/server-preserve/20261022/lba-lavis-sq-instructblip) | Preserves the server's SQ-InstructBLIP checkout, including Qwen2.5-VL Questioner generation | Published separately because the local and remote `SQ-InstructBLIP` histories diverged; not merged into the existing branch |
 | [`greeksharifa/Flipped-VQA:master`](https://github.com/greeksharifa/Flipped-VQA/tree/master) | Pre-existing fork of `mlvlab/Flipped-VQA` | Retained unchanged at `24b91ea2b3cd21746f9b4ae5767e9fbb9aca406c`; migrated INQUIRER source refs were removed after guarded publication |
 
 ## Ownership and provenance
@@ -90,3 +92,8 @@ as a dated source snapshot at
 [`docs/server-inventory/LBA-container-README.md`](docs/server-inventory/LBA-container-README.md).
 This snapshot records the original local inventory and attribution; use this
 README and the branch links above as the current repository map.
+
+The `greeksharifa/Flipped-VQA` fork is archived and read-only. The server's
+separate `local/flipped-vqa-workspace` branch and its DramaQA sub-question
+extension therefore remain local pending an allowed publication destination;
+the fork's `master` branch was not changed.
