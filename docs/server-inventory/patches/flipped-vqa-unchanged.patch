@@ -1,0 +1,59 @@
+diff --git a/README.md b/README.md
+index c568535..9e62320 100644
+--- a/README.md
++++ b/README.md
+@@ -26,7 +26,7 @@ sh setup.sh
+ 
+ ## Dataset & LLaMA Preparation
+ 
+-You can download our preprocessed datasets (NExT-QA, STAR, DramaQA, VLEP and TVQA) at [here](https://drive.google.com/drive/folders/1XtMZMNW3CRmzvpEVYj29iaUgDFcPUroe?usp=drive_link). Put them in ```./data```. Also, you can download original LLaMA at [here](https://github.com/facebookresearch/llama/tree/llama_v1), and put the checkpoint in ```./pretrained```. 
++You can download our preprocessed datasets (NExT-QA, STAR, DramaQA, VLEP and TVQA) at [here](https://drive.google.com/drive/folders/1xEbnJlpsJ1AeLsD8mCchMafAs7ToNUdI). Put them in ```./data```. Also, you can download original LLaMA at [here](https://github.com/facebookresearch/llama/tree/llama_v1), and put the checkpoint in ```./pretrained```. 
+ 
+ ```
+ ./pretrained
+@@ -96,7 +96,7 @@ torchrun --rdzv_endpoint 127.0.0.1:1234 --nproc_per_node 8 train.py --model 7B \
+ --blr 7e-2 --weight_decay 0.02 --output_dir ./checkpoint/tvqa --dataset tvqa --accum_iter 4 --sub --vaq --qav
+ ```
+ 
+-We also provide fine-tuned checkpoints on each dataset at [here](https://drive.google.com/drive/folders/1XtMZMNW3CRmzvpEVYj29iaUgDFcPUroe?usp=drive_link).
++We also provide fine-tuned checkpoints on each dataset at [here](https://drive.google.com/drive/folders/1xEbnJlpsJ1AeLsD8mCchMafAs7ToNUdI).
+ 
+ ## Evaluation
+ From the training command, simply replace ```train.py``` to ```eval.py``` and add ```--resume ./your/checkpoint.pth```.
+diff --git a/engine.py b/engine.py
+index e50f8e6..7e57fd2 100644
+--- a/engine.py
++++ b/engine.py
+@@ -58,7 +58,7 @@ def val_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: torc
+     metric_logger = misc.MetricLogger(delimiter="  ")
+     metric_logger.add_meter('lr', misc.SmoothedValue(window_size=1, fmt='{value:.6f}'))
+     header = 'Epoch: [{}]'.format(epoch)
+-    print_freq = int(len(data_loader) / 4)
++    print_freq = int(len(data_loader) / 50)
+ 
+     for data_iter_step, data in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
+         answer = data['answer'].cuda()
+diff --git a/eval.py b/eval.py
+index 251fbbb..f919cce 100644
+--- a/eval.py
++++ b/eval.py
+@@ -116,6 +116,9 @@ def main(args):
+     best_acc = 0.
+ 
+     misc.load_model(args=args, model_without_ddp=model_without_ddp, optimizer=optimizer, loss_scaler=loss_scaler)
++    
++    import pickle
++    pickle.dump(args, open('flipped_vqa_args.pkl', 'wb'))
+ 
+     print(f"Start evaluation")
+     start_time = time.time()
+diff --git a/test.sh b/test.sh
+new file mode 100644
+index 0000000..1e844a7
+--- /dev/null
++++ b/test.sh
+@@ -0,0 +1,4 @@
++# NCCL_P2P_DISABLE=1 CUDA_VISIBLE_DEVICES=1,2,3,4 torchrun --rdzv_endpoint 127.0.0.1:1234 --nproc_per_node 4 eval.py --model 7B \
++CUDA_VISIBLE_DEVICES=5 python eval.py --model 7B \
++	--max_seq_len 450 --batch_size 16 --epochs 5 --warmup_epochs 2 --bias 3 --tau 100. --max_feats 10 --dataset $1 \
++	--blr 9e-2 --weight_decay 0.10 --output_dir ./checkpoint/$1 --accum_iter 8 --vaq --qav --resume pretrained/$1.pth

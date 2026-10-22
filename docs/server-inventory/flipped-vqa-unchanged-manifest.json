@@ -1,0 +1,27 @@
+{
+  "source_checkout": "/home/ywjang/LBA/Flipped-VQA/Flipped-VQA_unchanged",
+  "source_kind": "ignored non-Git backup snapshot; exact changed source files only",
+  "base_commit": "24b91ea2b3cd21746f9b4ae5767e9fbb9aca406c",
+  "patch": "patches/flipped-vqa-unchanged.patch",
+  "patch_bytes": 3104,
+  "patch_sha256": "345e74f913c01b7b1f16e264b068afa8a2c106dfb8bd8971a52fec4e3be76fc0",
+  "reconstructed_tree": "f5ce1a435cd6ee90bc91e031847d32daa71fdc76",
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "26738fca32bf3ef5e313593ed0724885fc5891324aae61aba219937a26ffab4f"
+    },
+    {
+      "path": "engine.py",
+      "sha256": "c1e76050c480ea9da28c948da69e692f203f9d7757bc66288b1bfe4d9b313a4d"
+    },
+    {
+      "path": "eval.py",
+      "sha256": "81598b37ba03718bf18b73e3c717a615bd7e3a6f0ea64680a4f7b8a19fda88e1"
+    },
+    {
+      "path": "test.sh",
+      "sha256": "7f936bab24578633b306c546f51caaa3b738ee86428bfb3f38e5439eb8b97c07"
+    }
+  ]
+}
