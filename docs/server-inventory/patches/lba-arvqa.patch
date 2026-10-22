@@ -1,0 +1,52 @@
+From 5f08df587555b6b70571abe59bca587f23973349 Mon Sep 17 00:00:00 2001
+From: greeksharifa <greeksharifa@gmail.com>
+Date: Thu, 23 Jul 2026 19:57:13 +0900
+Subject: [PATCH] Add a portable ARVQA inference wrapper
+
+- Add a repository-relative launcher for the recovered third-year inference flow.
+- Ignore local checkpoints, generated predictions, and dataset links that were archived separately.
+---
+ .gitignore      | 11 ++++++++++-
+ 3rd_year/run.sh | 10 ++++++++++
+ 2 files changed, 20 insertions(+), 1 deletion(-)
+ create mode 100755 3rd_year/run.sh
+
+diff --git a/.gitignore b/.gitignore
+index e928de1..d92fbef 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,4 +1,13 @@
+ # Byte-compiled / optimized / DLL files
+ __pycache__/
+ *.py[cod]
+-*$py.class
+\ No newline at end of file
++*$py.class
++
++# Local checkpoints, generated predictions, and dataset links.
++/2nd_year/saves/ckpt/
++/3rd_year/LBA_2024/output_KAIST.json
++/3rd_year/LBA_2024/output_KAIST copy.json
++/3rd_year/demo/LBA_2024/
++/3rd_year/saves/AnotherMissOhQA_object_list.pkl
++/dataset/AnotherMissOh/scene_graph
++/dataset/DramaQA
+diff --git a/3rd_year/run.sh b/3rd_year/run.sh
+new file mode 100755
+index 0000000..51f6bd5
+--- /dev/null
++++ b/3rd_year/run.sh
+@@ -0,0 +1,10 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
++repo_dir=$(dirname "$script_dir")
++
++python "$script_dir/main.py" \
++  --root_dir "$script_dir" \
++  --model_ckpt "$repo_dir/2nd_year/saves/ckpt/2023-11-04_04_24_48_best_loss.pt" \
++  --classifier_ckpt "$repo_dir/2nd_year/saves/ckpt/2023-11-04_04_24_48_classifier_best_loss.pt"
+-- 
+2.34.1
+

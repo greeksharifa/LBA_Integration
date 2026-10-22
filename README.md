@@ -91,9 +91,12 @@ The container-level LBA map that was outside any Git repository is preserved
 as a dated source snapshot at
 [`docs/server-inventory/LBA-container-README.md`](docs/server-inventory/LBA-container-README.md).
 This snapshot records the original local inventory and attribution; use this
-README and the branch links above as the current repository map.
+README and the branch links above as the current repository map. Independent archived
+child source patches and exact restoration bases are retained in the
+[server source preservation index](docs/server-inventory/README.md).
 
 The `greeksharifa/Flipped-VQA` fork is archived and read-only. The server's
-separate `local/flipped-vqa-workspace` branch and its DramaQA sub-question
-extension therefore remain local pending an allowed publication destination;
-the fork's `master` branch was not changed.
+separate `local/flipped-vqa-workspace` branch contains DramaQA sub-question source
+that is absent from the migrated INQUIRER branch. Its complete commit patches and
+[comparison evidence](docs/server-inventory/flipped-vqa-comparison.md) are retained
+in this repository; the fork's `master` branch was not changed.

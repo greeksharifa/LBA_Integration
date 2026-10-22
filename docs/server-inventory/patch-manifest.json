@@ -1,0 +1,52 @@
+[
+  {
+    "id": "ask-anything",
+    "source_checkout": "/home/ywjang/LBA/archivers/LBA_LAVIS_uncertainty_v2/Ask-Anything",
+    "source_commit": "abfd5c82bb69e22fd97602256e0fd8ed48f2bc79",
+    "base_commit": "0a79339cd4454f0584db0bca79d61737acc8166b",
+    "patch": "patches/ask-anything.patch",
+    "bytes": 18486,
+    "sha256": "b534bfc72727d9f3769a2f6fd666f14ca4f01bfa12df5f118f5eb365b946b0a8",
+    "restoration_check": "git read-tree BASE into temporary index; git apply --cached --check PATCH passed"
+  },
+  {
+    "id": "flipped-vqa-upstream",
+    "source_checkout": "/home/ywjang/LBA/archivers/LBA_LAVIS_uncertainty_v2/flipped_vqa",
+    "source_commit": "0ec7e6bcc73adcbfe559ea9e15ad1307cef905cb",
+    "base_commit": "dc6e2e138d1114ef34a0949f4ef66ccdf7dd2723",
+    "patch": "patches/flipped-vqa-upstream.patch",
+    "bytes": 6761,
+    "sha256": "55094677a4d6b9f0646e5b0fe8b395065d8bbe8f81907f42f4783518c1a9654a",
+    "restoration_check": "git read-tree BASE into temporary index; git apply --cached --check PATCH passed"
+  },
+  {
+    "id": "lba-arvqa",
+    "source_checkout": "/home/ywjang/LBA/archivers/LBA_Integration-local-20260723/LBA-ARVQA",
+    "source_commit": "5f08df587555b6b70571abe59bca587f23973349",
+    "base_commit": "1bd3e29955913797c312fade9c9b3db28ba019fe",
+    "patch": "patches/lba-arvqa.patch",
+    "bytes": 1619,
+    "sha256": "7038e1966db5f41e4850be5fb210b6cb4ab9193731e764b6e811c7f8b1ef4545",
+    "restoration_check": "git read-tree BASE into temporary index; git apply --cached --check PATCH passed"
+  },
+  {
+    "id": "lba-dramaqg",
+    "source_checkout": "/home/ywjang/LBA/archivers/LBA_Integration-local-20260723/LBA-DramaQG",
+    "source_commit": "5ea190fd401b03ece727cf290e10c426ea014103",
+    "base_commit": "76a181828577593ab5c216c8eee18104872bfbda",
+    "patch": "patches/lba-dramaqg.patch",
+    "bytes": 1175,
+    "sha256": "aa070e81b208a2cece40d4175985d8b1a4810da2c7a968571a65e8affbda2f39",
+    "restoration_check": "git read-tree BASE into temporary index; git apply --cached --check PATCH passed"
+  },
+  {
+    "id": "sevila",
+    "source_checkout": "/home/ywjang/LBA/archivers/LBA_Integration-local-20260723/SeViLA",
+    "source_commit": "e46554a614acfea86e757cd91815b8f81790993a",
+    "base_commit": "419e7281da60169d98ca7e81dbce10c8d4019b6b",
+    "patch": "patches/sevila.patch",
+    "bytes": 24630,
+    "sha256": "d260b4ca2adbbdc8d41215fd38b382f0c2f579a837d4206cced68937d3672d1f",
+    "restoration_check": "git read-tree BASE into temporary index; git apply --cached --check PATCH passed"
+  }
+]

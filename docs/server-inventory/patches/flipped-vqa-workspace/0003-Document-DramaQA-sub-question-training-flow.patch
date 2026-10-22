@@ -1,0 +1,56 @@
+From 5b05038dbb3e615e2cc92b489c1a85a6052cbb4f Mon Sep 17 00:00:00 2001
+From: greeksharifa <greeksharifa@gmail.com>
+Date: Thu, 22 Oct 2026 12:57:05 +0900
+Subject: [PATCH 3/3] Document DramaQA sub-question training flow
+
+Describe the input files, baseline and sub-question checkpoints, and the single- and multi-GPU scripts added to this LBA checkout. Align the multi-GPU resume path with the checkpoint_best.pth filename produced by train.py.
+
+This preserves the local extension on a separate branch and does not modify upstream master.
+---
+ README.md                 | 22 ++++++++++++++++++++++
+ subqa_dramaqa_multigpu.sh |  2 +-
+ 2 files changed, 23 insertions(+), 1 deletion(-)
+
+diff --git a/README.md b/README.md
+index c568535..b311b6c 100644
+--- a/README.md
++++ b/README.md
+@@ -54,6 +54,28 @@ You can download our preprocessed datasets (NExT-QA, STAR, DramaQA, VLEP and TVQ
+        :
+ ```
+ 
++## DramaQA sub-question extension (local LBA preservation branch)
++
++The `local/flipped-vqa-workspace` branch adds DramaQA Questioner and
++sub-question datasets to the upstream Flipped-VQA code. Its inputs remain
++external: `data/dramaqa/AnotherMissOhQA_{train,val,test}_set.json` and
++`data/dramaqa/clipvitl14.pth`.
++
++The training scripts use these checkpoints and output directories:
++
++| Script | Purpose | Output or checkpoint |
++| --- | --- | --- |
++| `dramaqa.sh` | Train the DramaQA baseline | `checkpoint/dramaqa/checkpoint_best.pth` |
++| `subqa_dramaqa_singlegpu.sh` | Train on the sub-question dataset with one GPU | `checkpoint/subqa_dramaqa/` |
++| `subqa_dramaqa_multigpu.sh` | Train on the sub-question dataset with six GPUs | `checkpoint/subqa_dramaqa/` |
++| `test_subqa_dramaqa_multigpu.sh` | Evaluate the saved sub-question checkpoint | `checkpoint/subqa_dramaqa/checkpoint_best.pth` |
++
++Run the baseline before either sub-question training script. The multi-GPU
++scripts currently select devices `0,1,2,3,4,5`; adjust `CUDA_VISIBLE_DEVICES`
++and `--nproc_per_node` together for a different worker count. The fork's
++existing `master` branch is unchanged; this extension is kept on the separate
++LBA preservation branch.
++
+ ## Training LLaMA-VQA (LLaMA + Flipped-VQA)
+ 
+ ### NExT-QA
+diff --git a/subqa_dramaqa_multigpu.sh b/subqa_dramaqa_multigpu.sh
+index dbd80a6..a92a7af 100755
+--- a/subqa_dramaqa_multigpu.sh
++++ b/subqa_dramaqa_multigpu.sh
+@@ -1 +1 @@
+-NCCL_P2P_DISABLE=1 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5 torchrun --rdzv_endpoint 127.0.0.1:1234 --nproc_per_node 6 train.py --model 7B --max_seq_len 384 --batch_size 2 --epochs 10 --warmup_epochs 2 --bias 3 --tau 100. --max_feats 10 --dataset subqa_dramaqa --blr 9e-2 --weight_decay 0.10 --output_dir ./checkpoint/subqa_dramaqa --accum_iter 8 --vaq --qav --resume checkpoint/dramaqa/dramaqa.pth
++NCCL_P2P_DISABLE=1 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5 torchrun --rdzv_endpoint 127.0.0.1:1234 --nproc_per_node 6 train.py --model 7B --max_seq_len 384 --batch_size 2 --epochs 10 --warmup_epochs 2 --bias 3 --tau 100. --max_feats 10 --dataset subqa_dramaqa --blr 9e-2 --weight_decay 0.10 --output_dir ./checkpoint/subqa_dramaqa --accum_iter 8 --vaq --qav --resume checkpoint/dramaqa/checkpoint_best.pth
+-- 
+2.34.1
+

@@ -1,0 +1,644 @@
+From e46554a614acfea86e757cd91815b8f81790993a Mon Sep 17 00:00:00 2001
+From: greeksharifa <greeksharifa@gmail.com>
+Date: Thu, 23 Jul 2026 19:57:13 +0900
+Subject: [PATCH] Add local SeViLA evaluation workflows
+
+- Preserve NExT-QA and STAR configuration, sampling, diagnostics, and launch scripts.
+- Record preprocessing work while excluding archived checkpoints, generated annotations, caches, and package metadata.
+---
+ .gitignore                                    |  8 ++
+ colors.py                                     | 49 ++++++++++++
+ .../configs/datasets/nextqa/defaults_qa.yaml  | 14 ++--
+ lavis/configs/datasets/star/defaults_qa.yaml  | 14 ++--
+ lavis/configs/default.yaml                    |  2 +-
+ .../datasets/mc_video_vqa_datasets.py         | 17 +++-
+ lavis/models/sevila_models/sevila.py          | 78 +++++++++++-------
+ lavis/projects/sevila/eval/nextqa_eval.yaml   | 10 +--
+ onegpu_nextqa.sh                              | 21 +++++
+ run_nextqa.sh                                 | 21 +++++
+ .../{nexqa_infer.sh => nextqa_infer.sh}       |  0
+ run_star.sh                                   | 22 +++++
+ sevila_data/Data Preprocess.ipynb             | 80 +++++++++++++++----
+ 13 files changed, 269 insertions(+), 67 deletions(-)
+ create mode 100644 .gitignore
+ create mode 100644 colors.py
+ create mode 100644 onegpu_nextqa.sh
+ create mode 100644 run_nextqa.sh
+ rename run_scripts/sevila/inference/{nexqa_infer.sh => nextqa_infer.sh} (100%)
+ create mode 100644 run_star.sh
+
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..9d15fa3
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,8 @@
++# Local runtime caches and generated package metadata.
++**/__pycache__/
++/salesforce_lavis.egg-info/
++
++# Local checkpoints and generated NExT-QA annotations.
++/sevila_checkpoints/
++/sevila_data/nextqa/train.json
++/sevila_data/nextqa/val.json
+diff --git a/colors.py b/colors.py
+new file mode 100644
+index 0000000..17aa4d4
+--- /dev/null
++++ b/colors.py
+@@ -0,0 +1,49 @@
++import logging
++
++import torch
++
++from lavis.common import dist_utils
++
++
++class Colors:
++    BLACK = '\033[30m'
++    RED = '\033[31m'
++    GREEN = '\033[32m'
++    YELLOW = '\033[33m'
++    BLUE = '\033[34m'
++    MAGENTA = '\033[35m'
++    CYAN = '\033[36m'
++    WHITE = '\033[37m'
++    UNDERLINE = '\033[4m'
++    
++    RESET = '\033[0m'
++    
++    BRIGHT_BLACK = '\033[90m'
++    BRIGHT_RED = '\033[91m'
++    BRIGHT_GREEN = '\033[92m'
++    BRIGHT_YELLOW = '\033[93m'
++    BRIGHT_BLUE = '\033[94m'
++    BRIGHT_MAGENTA = '\033[95m'
++    BRIGHT_CYAN = '\033[96m'
++    BRIGHT_WHITE = '\033[97m'
++    BRIGHT_END = '\033[0m'
++    
++def print_color(msg, color=Colors.BRIGHT_MAGENTA):
++    logging.info(color + msg + Colors.RESET)
++
++
++def print_sample(samples, output_text="", msg="print sample...", color=Colors.BRIGHT_MAGENTA):
++    # if dist_utils.is_main_process():
++    logging.info(color + msg + Colors.RESET)
++    for key in samples.keys():
++        value = samples[key].shape if torch.is_tensor(samples[key]) else samples[key]
++        # if samples[key] != "image":
++        colour = Colors.BRIGHT_YELLOW if key == "prompt" else color
++        logging.info(colour + f"key: {key},\tvalue: {value}" + Colors.RESET)
++    if output_text != "":
++        if isinstance(output_text, list):
++            for text in output_text:
++                logging.info(Colors.BRIGHT_YELLOW + "output_text: " + text + Colors.RESET)
++        # logging.info(color + output_text + Colors.RESET)
++                
++                
+\ No newline at end of file
+diff --git a/lavis/configs/datasets/nextqa/defaults_qa.yaml b/lavis/configs/datasets/nextqa/defaults_qa.yaml
+index 6353d02..b953117 100644
+--- a/lavis/configs/datasets/nextqa/defaults_qa.yaml
++++ b/lavis/configs/datasets/nextqa/defaults_qa.yaml
+@@ -11,13 +11,13 @@ datasets:
+       # Be careful not to append minus sign (-) before split to avoid itemizing
+       annotations:
+         train:
+-          url: /nas-ssd/shoubin/datasets/nextqa/train.json
+-          storage: /nas-ssd/shoubin/datasets/nextqa/train.json
++          url: sevila_data/nextqa/train.json
++          storage: sevila_data/nextqa/train.json
+         val:
+-          url: /nas-ssd/shoubin/datasets/nextqa/val.json
+-          storage: /nas-ssd/shoubin/datasets/nextqa/val.json
++          url: sevila_data/nextqa/val.json
++          storage: sevila_data/nextqa/val.json
+         test:
+-          url: /nas-ssd/shoubin/datasets/nextqa/val.json
+-          storage: /nas-ssd/shoubin/datasets/nextqa/val.json
++          url: sevila_data/nextqa/val.json
++          storage: sevila_data/nextqa/val.json
+       videos:
+-        storage: /nas-hdd/shoubin/videos/vidor/videos/
++        storage: /data1/NExT-QA/NExTVideo/
+diff --git a/lavis/configs/datasets/star/defaults_qa.yaml b/lavis/configs/datasets/star/defaults_qa.yaml
+index ca0f225..7dcc54a 100644
+--- a/lavis/configs/datasets/star/defaults_qa.yaml
++++ b/lavis/configs/datasets/star/defaults_qa.yaml
+@@ -6,13 +6,13 @@ datasets:
+       # Be careful not to append minus sign (-) before split to avoid itemizing
+       annotations:
+         train:
+-          url: /nas-ssd/shoubin/datasets/star/train.json
+-          storage: /nas-ssd/shoubin/datasets/star/train.json
++          url: /data1/STAR/STAR_train.json
++          storage: /data1/STAR/STAR_train.json
+         val:
+-          url: /nas-ssd/shoubin/datasets/star/val.json
+-          storage: /nas-ssd/shoubin/datasets/star/val.json
++          url: /data1/STAR/STAR_val.json
++          storage: /data1/STAR/STAR_val.json
+         test:
+-          url: /nas-ssd/shoubin/datasets/star/val.json
+-          storage: /nas-ssd/shoubin/datasets/star/val.json
++          url: /data1/STAR/STAR_val.json
++          storage: /data1/STAR/STAR_val.json
+       videos:
+-        storage: /nas-hdd/shoubin/videos/charades/Charades_v1_480/
+\ No newline at end of file
++        storage: /data1/STAR/videos_480/
+\ No newline at end of file
+diff --git a/lavis/configs/default.yaml b/lavis/configs/default.yaml
+index d972059..cfb6355 100644
+--- a/lavis/configs/default.yaml
++++ b/lavis/configs/default.yaml
+@@ -7,4 +7,4 @@ env:
+   # For default users
+   # cache_root: "cache"
+   # For internal use with persistent storage
+-  cache_root: "/nas-hdd/shoubin/pretrained_model/"
++  cache_root: "/data1/"
+diff --git a/lavis/datasets/datasets/mc_video_vqa_datasets.py b/lavis/datasets/datasets/mc_video_vqa_datasets.py
+index 918fd78..dd924c7 100644
+--- a/lavis/datasets/datasets/mc_video_vqa_datasets.py
++++ b/lavis/datasets/datasets/mc_video_vqa_datasets.py
+@@ -46,6 +46,13 @@ class MCVideoQADataset(MultimodalClassificationDataset, __DisplMixin):
+         while result is None:
+ 
+             ann = self.annotation[index]
++            from colors import print_color, Colors
++            # print_color(f'mc_video_vqa.datasets.py ann: {type(ann)}\n{ann}', color=Colors.YELLOW) 
++            # ann: <class 'dict'>
++            # {'video': '1018/9082180631', 'num_option': 5, 'qid': 'CW_9082180631_2', 
++            # 'a0': 'supervise the children.', 'a1': 'singing.', 'a2': 'pass her something.', 'a3': 'waiting for the man.', 'a4': 'nervous.', 
++            # 'answer': 0, 'question': 'why does the woman in green pants skate behind everyone else?', 'instance_id': '35'}
++            vpath = os.path.join(self.vis_root, str(ann['video']) + '.mp4')   
+             qid = ann['qid'] 
+ 
+             if 'QVHighlight' in qid:
+@@ -58,7 +65,7 @@ class MCVideoQADataset(MultimodalClassificationDataset, __DisplMixin):
+                 start, end = float(ann['start']), float(ann['end'])
+                 clip = [start, end]
+             else:
+-                clip = None       
++                clip = None
+             
+             if 'VLEP' in qid:
+                 qa_prompt = 'Upon observing the provided frames, what is the most probable subsequent event?'
+@@ -117,7 +124,13 @@ class MCVideoQADataset(MultimodalClassificationDataset, __DisplMixin):
+                 frms, indices, fps = self.vis_processor(vpath, clip_proposal=clip)
+                 frms = frms.permute(1, 0, 2, 3)
+                 assert len(frms) == self.vis_processor.n_frms
+-                
++                # print_color(msg="mc_video_vqa.datasets.py frms: {}".format(type(frms)), color=Colors.BRIGHT_RED)
++                # print_color(msg="mc_video_vqa.datasets.py frms: {}".format(frms.shape), color=Colors.BRIGHT_RED)
++                # print(frms)
++                # <class 'torch.Tensor'>
++                # torch.Size([32, 3, 224, 224]) # after permute 
++                # tensor([[[[-0.3324, -0.0405,  0.5727,  ...,  1.2296,  1.3464,  1.4486], ...
++                    
+                 if 'QVHighlight' in qid: 
+                     time_stamp = [float(idx/fps) for idx in indices]
+                     answers = []
+diff --git a/lavis/models/sevila_models/sevila.py b/lavis/models/sevila_models/sevila.py
+index 01f9688..1c38496 100644
+--- a/lavis/models/sevila_models/sevila.py
++++ b/lavis/models/sevila_models/sevila.py
+@@ -5,6 +5,7 @@
+  For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+ """
+ import logging
++from colors import print_color, Colors
+ 
+ import copy
+ import torch
+@@ -41,46 +42,46 @@ class SeViLA(Blip2Base):
+         """
+         apply_lemmatizer: when set to True, postprocess predict_answers() result with lemmas.
+         """
+-        super().__init__()
++        # super().__init__()
+         
+-        self.task = task
++        # self.task = task
+         
+-        # vision backbone
+-        self.visual_encoder, self.ln_vision, self.ln_vision_loc = self.init_vision_encoder_sevila(
+-            img_size, drop_path_rate, use_grad_checkpoint, vit_precision)
++        # # vision backbone
++        # self.visual_encoder, self.ln_vision, self.ln_vision_loc = self.init_vision_encoder_sevila(
++        #     img_size, drop_path_rate, use_grad_checkpoint, vit_precision)
+ 
+-        # freeze ViT
+-        if freeze_vit:
+-            for name, param in self.visual_encoder.named_parameters():
+-                param.requires_grad = False         
+-            self.visual_encoder = self.visual_encoder.eval()
+-            self.visual_encoder.train = disabled_train
+-            logging.info("freeze vision encoder")
++        # # freeze ViT
++        # if freeze_vit:
++        #     for name, param in self.visual_encoder.named_parameters():
++        #         param.requires_grad = False         
++        #     self.visual_encoder = self.visual_encoder.eval()
++        #     self.visual_encoder.train = disabled_train
++        #     logging.info("freeze vision encoder")
+             
+         # text backbone
+-        self.t5_tokenizer = T5TokenizerFast.from_pretrained(t5_model)
+-        t5_config = T5Config.from_pretrained(t5_model)
+-        t5_config.dense_act_fn = "gelu"
+-        self.t5_model = T5ForConditionalGeneration.from_pretrained(
+-        t5_model, config=t5_config)
++        # self.t5_tokenizer = T5TokenizerFast.from_pretrained(t5_model)
++        # t5_config = T5Config.from_pretrained(t5_model)
++        # t5_config.dense_act_fn = "gelu"
++        # self.t5_model = T5ForConditionalGeneration.from_pretrained(
++        # t5_model, config=t5_config)
+ 
+-        # freeze T5
+-        for name, param in self.t5_model.named_parameters():
+-            param.requires_grad = False
+-            param.data = param.data.bfloat16() 
++        # # freeze T5
++        # for name, param in self.t5_model.named_parameters():
++        #     param.requires_grad = False
++        #     param.data = param.data.bfloat16() 
+ 
+         # Q-Former for Answerer
+-        self.Qformer, self.query_tokens = self.init_Qformer(
+-        num_query_token, self.visual_encoder.num_features)
+-        self.Qformer.cls = None
++        # self.Qformer, self.query_tokens = self.init_Qformer(
++        # num_query_token, self.visual_encoder.num_features)
++        # self.Qformer.cls = None
+         self.Qformer.bert.embeddings.word_embeddings = None
+         self.Qformer.bert.embeddings.position_embeddings = None
+         for layer in self.Qformer.bert.encoder.layer:
+             layer.output = None
+             layer.intermediate = None
+         self.num_query_token = num_query_token
+-        self.t5_proj = nn.Linear(
+-        self.Qformer.config.hidden_size, self.t5_model.config.hidden_size)
++        # self.t5_proj = nn.Linear(
++        # self.Qformer.config.hidden_size, self.t5_model.config.hidden_size)
+         
+         # Q-Former for Localizer
+         if 'loc' in task:
+@@ -97,13 +98,13 @@ class SeViLA(Blip2Base):
+             self.Qformer_loc.config.hidden_size, self.t5_model.config.hidden_size
+             )
+             
+-        self.max_txt_len = 77
++        # self.max_txt_len = 77
+         answer_id = [71, 272, 205, 309, 262] # A B C D E
+         self.answer_id = answer_id[:answer_num]
+         self.yes_id, self.no_id = 4273, 150
+         
+-        self._apply_lemmatizer = apply_lemmatizer
+-        self._lemmatizer = None
++        # self._apply_lemmatizer = apply_lemmatizer
++        # self._lemmatizer = None
+         
+         self.frame_num = frame_num
+         self.ANS_MAP = {'A':0, 'B':1, 'C':2, 'D':3, 'E':4}
+@@ -131,12 +132,21 @@ class SeViLA(Blip2Base):
+         num_captions=1, temperature=1,):
+ 
+         image = samples["video"]
++        print_color('shape:', color=Colors.YELLOW)
++        print('image.shape:', image.shape)
+         
+         b, t, c, w, h = image.shape     
+         image = image.reshape(-1, c, w, h)
++        print('image.shape:', image.shape)
+         image_embeds = self.visual_encoder(image) 
+         _, n, _ = image_embeds.shape
++        print('image_embeds.shape:', image_embeds.shape)
+         image_atts = torch.ones(image_embeds.size()[:-1], dtype=torch.long).to(image.device) # bt n c
++        print('image_atts.shape:', image_atts.shape)
++        print("'train_loc' in self.task:", 'train_loc' in self.task)
++        print("'train_qa_with_loc' in self.task:", 'train_qa_with_loc' in self.task)
++        print("'loc' not in self.task:", 'loc' not in self.task)
++        print("'train_qa_wo_loc' in self.task:", 'train_qa_wo_loc' in self.task)
+         
+         # Localizer self-refinement
+         if 'train_loc' in self.task:
+@@ -458,6 +468,10 @@ class SeViLA(Blip2Base):
+         """
+         out = {}
+         image, qid = samples["video"], samples['question_id']
++        print_color(f'image.shape: {image.shape}', color=Colors.GREEN) # image.shape: torch.Size([8, 32, 3, 224, 224])
++        import pdb
++        # pdb.set_trace()
++        
+         text_input_qa, answer = samples['qa_input'], samples['qa_output']
+         
+         # uniform sampling
+@@ -600,9 +614,11 @@ class SeViLA(Blip2Base):
+                             video.append(image_embeds[i][f])
+                         video = torch.stack(video, dim=0)
+                         select_frames.append(video)
++                    pdb.set_trace()
++                    # 4개 frames를 선택한 것. len 8 list, select_frames[0]: Tensor[4, 257, 1408]
+                     
+-                    select_frames = torch.stack(select_frames, dim=0) # b 4, n , -1
+-                    select_frames = select_frames.reshape(-1, select_frames.shape[-2], select_frames.shape[-1])
++                    select_frames = torch.stack(select_frames, dim=0) # b 4, n , -1 
++                    select_frames = select_frames.reshape(-1, select_frames.shape[-2], select_frames.shape[-1]) # [32, 257, 1408]
+                     image_atts = torch.ones(select_frames.size()[:-1], dtype=torch.long).to(image.device) # bt n c
+                     query_tokens_qa = self.query_tokens.expand(select_frames.shape[0], -1, -1)
+                     query_output_qa = self.Qformer.bert(
+diff --git a/lavis/projects/sevila/eval/nextqa_eval.yaml b/lavis/projects/sevila/eval/nextqa_eval.yaml
+index 8aed173..cb50407 100644
+--- a/lavis/projects/sevila/eval/nextqa_eval.yaml
++++ b/lavis/projects/sevila/eval/nextqa_eval.yaml
+@@ -7,12 +7,12 @@ model:
+   arch: sevila
+   model_type: pretrain_flant5xl
+   load_finetuned: True
+-  finetuned: 'https://huggingface.co/Shoubin/SeViLA/resolve/main/sevila_pretrained.pth'
++  finetuned: 'https://huggingface.co/Shoubin/SeViLA/resolve/main/sevila_pretrained.pth' # 'sevila_checkpoints/sevila_pretrained.pth'
+   use_grad_checkpoint: False
+   freeze_vit: True
+-  frame_num: 8
++  frame_num: 8 # 4
+   answer_num: 5
+-  task: freeze_qa_vid
++  task: freeze_qa_vid # 'qvh_freeze_loc_freeze_qa_vid'
+   qformer_input_text: False
+ 
+ datasets:
+@@ -20,7 +20,7 @@ datasets:
+     vis_processor:
+         eval:
+           name: "blip_video_eval"
+-          n_frms: 4
++          n_frms: 4 # 32
+           image_size: 224
+     text_processor:
+         eval:
+@@ -38,7 +38,7 @@ run:
+   weight_decay: 0.05
+   max_epoch: 5
+   batch_size_train: 32
+-  batch_size_eval: 32
++  batch_size_eval: 32 # 8
+   num_workers: 8
+   accum_grad_iters: 1
+ 
+diff --git a/onegpu_nextqa.sh b/onegpu_nextqa.sh
+new file mode 100644
+index 0000000..809c8d7
+--- /dev/null
++++ b/onegpu_nextqa.sh
+@@ -0,0 +1,21 @@
++result_dir="sevila_output/nextqa/"
++train_path="sevila_data/nextqa/train.json"
++val_path="sevila_data/nextqa/val.json"
++video_path="/data1/NExT-QA/NExTVideo/"
++
++exp_name='nextqa_infer'
++ckpt='sevila_checkpoints/sevila_pretrained.pth'
++CUDA_VISIBLE_DEVICES=1 python evaluate.py \
++--cfg-path lavis/projects/sevila/eval/nextqa_eval.yaml \
++--options run.output_dir=${result_dir}${exp_name} \
++datasets.nextqa.build_info.annotations.train.storage=${train_path} \
++datasets.nextqa.build_info.annotations.val.storage=${val_path} \
++datasets.nextqa.build_info.annotations.test.storage=${val_path} \
++datasets.nextqa.build_info.videos.storage=${video_path} \
++model.frame_num=4 \
++datasets.nextqa.vis_processor.eval.n_frms=32 \
++run.batch_size_eval=8 \
++model.task='qvh_freeze_loc_freeze_qa_vid' \
++model.finetuned=${ckpt} \
++run.task='videoqa'
++
+diff --git a/run_nextqa.sh b/run_nextqa.sh
+new file mode 100644
+index 0000000..b6ea5d9
+--- /dev/null
++++ b/run_nextqa.sh
+@@ -0,0 +1,21 @@
++result_dir="/data1/NExT-QA/sevila/"
++train_path="/data1/NExT-QA/nextqa/train.csv"
++val_path="/data1/NExT-QA/nextqa/val.csv"
++video_path="/data1/NExT-QA/NExTVideo/"
++
++exp_name='nextqa_infer'
++ckpt='sevila_checkpoints/sevila_pretrained.pth'
++CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.run --nproc_per_node=4 evaluate.py \
++--cfg-path lavis/projects/sevila/eval/nextqa_eval.yaml \
++--options run.output_dir=${result_dir}${exp_name} \
++datasets.nextqa.build_info.annotations.train.storage=${train_path} \
++datasets.nextqa.build_info.annotations.val.storage=${val_path} \
++datasets.nextqa.build_info.annotations.test.storage=${val_path} \
++datasets.nextqa.build_info.videos.storage=${video_path} \
++model.frame_num=4 \
++datasets.nextqa.vis_processor.eval.n_frms=32 \
++run.batch_size_eval=8 \
++model.task='qvh_freeze_loc_freeze_qa_vid' \
++model.finetuned=${ckpt} \
++run.task='videoqa'
++
+diff --git a/run_scripts/sevila/inference/nexqa_infer.sh b/run_scripts/sevila/inference/nextqa_infer.sh
+similarity index 100%
+rename from run_scripts/sevila/inference/nexqa_infer.sh
+rename to run_scripts/sevila/inference/nextqa_infer.sh
+diff --git a/run_star.sh b/run_star.sh
+new file mode 100644
+index 0000000..c2d8ec9
+--- /dev/null
++++ b/run_star.sh
+@@ -0,0 +1,22 @@
++result_dir="/data1/STAR/sevila/"
++train_path="/data1/STAR/STAR_train.json"
++val_path="/data1/STAR/STAR_val.json"
++video_path="/data1/STAR/videos_480/"
++# /data1/STAR/sevila/ /data1/STAR/STAR_train.json /data1/STAR/STAR_val.json  /data1/STAR/videos_480/
++
++exp_name='star_infer'
++ckpt='sevila_checkpoints/sevila_pretrained.pth'
++CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.run --nproc_per_node=4 evaluate.py \
++--cfg-path lavis/projects/sevila/eval/star_eval.yaml \
++--options run.output_dir=${result_dir}${exp_name} \
++datasets.star.build_info.annotations.train.storage=${train_path} \
++datasets.star.build_info.annotations.val.storage=${val_path} \
++datasets.star.build_info.annotations.test.storage=${val_path} \
++datasets.star.build_info.videos.storage=${video_path} \
++model.frame_num=4 \
++datasets.star.vis_processor.eval.n_frms=32 \
++run.batch_size_eval=8 \
++model.task='qvh_freeze_loc_freeze_qa_vid' \
++model.finetuned=${ckpt} \
++run.task='videoqa'
++
+diff --git a/sevila_data/Data Preprocess.ipynb b/sevila_data/Data Preprocess.ipynb
+index f3a37bb..6879a6b 100644
+--- a/sevila_data/Data Preprocess.ipynb	
++++ b/sevila_data/Data Preprocess.ipynb	
+@@ -2,7 +2,7 @@
+  "cells": [
+   {
+    "cell_type": "code",
+-   "execution_count": null,
++   "execution_count": 17,
+    "id": "4204c7e1",
+    "metadata": {},
+    "outputs": [],
+@@ -14,7 +14,7 @@
+   },
+   {
+    "cell_type": "code",
+-   "execution_count": null,
++   "execution_count": 18,
+    "id": "5e807f09",
+    "metadata": {},
+    "outputs": [],
+@@ -24,7 +24,7 @@
+   },
+   {
+    "cell_type": "code",
+-   "execution_count": null,
++   "execution_count": 19,
+    "id": "09845339",
+    "metadata": {},
+    "outputs": [],
+@@ -39,7 +39,7 @@
+   },
+   {
+    "cell_type": "code",
+-   "execution_count": null,
++   "execution_count": 20,
+    "id": "2edfddc1",
+    "metadata": {},
+    "outputs": [],
+@@ -49,13 +49,34 @@
+   },
+   {
+    "cell_type": "code",
+-   "execution_count": null,
++   "execution_count": 21,
++   "id": "28f3e4f2",
++   "metadata": {},
++   "outputs": [
++    {
++     "data": {
++      "text/plain": [
++       "'/home/ywjang/LBA_Integration/SeViLA/sevila_data'"
++      ]
++     },
++     "execution_count": 21,
++     "metadata": {},
++     "output_type": "execute_result"
++    }
++   ],
++   "source": [
++    "os.getcwd()"
++   ]
++  },
++  {
++   "cell_type": "code",
++   "execution_count": 22,
+    "id": "9d49722d",
+    "metadata": {},
+    "outputs": [],
+    "source": [
+-    "raw_train_csv = 'train.csv'\n",
+-    "raw_val_csv = 'val.csv'\n",
++    "raw_train_csv = '/data1/NExT-QA/nextqa/train.csv'\n",
++    "raw_val_csv = '/data1/NExT-QA/nextqa/val.csv'\n",
+     "raw_train = pd.read_csv(raw_train_csv, delimiter=',')\n",
+     "raw_val = pd.read_csv(raw_val_csv, delimiter=',')\n",
+     "train = []\n",
+@@ -76,17 +97,17 @@
+   },
+   {
+    "cell_type": "code",
+-   "execution_count": null,
++   "execution_count": 23,
+    "id": "943e9523",
+    "metadata": {},
+    "outputs": [],
+    "source": [
+-    "vid_map = json.load(open('map_vid_vidorID.json'))"
++    "vid_map = json.load(open('/data1/NExT-QA/map_vid_vidorID.json'))"
+    ]
+   },
+   {
+    "cell_type": "code",
+-   "execution_count": null,
++   "execution_count": 29,
+    "id": "afe73814",
+    "metadata": {},
+    "outputs": [],
+@@ -100,7 +121,7 @@
+     "    qa_dict['qid'] = '_'.join([qa['type'], str(qa['video']), str(qa['qid'])])\n",
+     "    for i in range(5):\n",
+     "        qa_dict['a{}'.format(str(i))] = qa['a{}'.format(str(i))]+'.'\n",
+-    "    qa_dict['answer'] = qa['answer']\n",
++    "    qa_dict['answer'] = int(qa['answer'])\n",
+     "    qa_dict['question'] = qa['question']+'?'\n",
+     "    new_train.append(qa_dict)\n",
+     "\n",
+@@ -111,14 +132,45 @@
+     "    qa_dict['qid'] = '_'.join([qa['type'], str(qa['video']), str(qa['qid'])])\n",
+     "    for i in range(5):\n",
+     "        qa_dict['a{}'.format(str(i))] = qa['a{}'.format(str(i))]+'.'\n",
+-    "    qa_dict['answer'] = qa['answer']\n",
++    "    qa_dict['answer'] = int(qa['answer'])\n",
+     "    qa_dict['question'] = qa['question']+'?'\n",
+     "    new_val.append(qa_dict)"
+    ]
+   },
+   {
+    "cell_type": "code",
+-   "execution_count": null,
++   "execution_count": 30,
++   "id": "c059fa9b",
++   "metadata": {},
++   "outputs": [
++    {
++     "name": "stdout",
++     "output_type": "stream",
++     "text": [
++      "34132\n",
++      "video 1164/3238737531 <class 'str'>\n",
++      "num_option 5 <class 'int'>\n",
++      "qid DC_3238737531_2 <class 'str'>\n",
++      "a0 one. <class 'str'>\n",
++      "a1 three. <class 'str'>\n",
++      "a2 seven. <class 'str'>\n",
++      "a3 two. <class 'str'>\n",
++      "a4 five. <class 'str'>\n",
++      "answer 3 <class 'int'>\n",
++      "question how many children are in the video? <class 'str'>\n"
++     ]
++    }
++   ],
++   "source": [
++    "print(len(new_train))\n",
++    "data = new_train[0]\n",
++    "for k,v in data.items():\n",
++    "    print(k,v, type(v))"
++   ]
++  },
++  {
++   "cell_type": "code",
++   "execution_count": 32,
+    "id": "218a75d3",
+    "metadata": {},
+    "outputs": [],
+@@ -559,7 +611,7 @@
+    "name": "python",
+    "nbconvert_exporter": "python",
+    "pygments_lexer": "ipython3",
+-   "version": "3.9.13"
++   "version": "3.8.19"
+   }
+  },
+  "nbformat": 4,
+-- 
+2.34.1
+

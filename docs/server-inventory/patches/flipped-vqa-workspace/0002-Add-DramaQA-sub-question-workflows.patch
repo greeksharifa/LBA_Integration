@@ -1,0 +1,709 @@
+From dccb479cdb592a7beacc9391c003e579f5f089dc Mon Sep 17 00:00:00 2001
+From: greeksharifa <greeksharifa@gmail.com>
+Date: Thu, 23 Jul 2026 19:47:37 +0900
+Subject: [PATCH 2/3] Add DramaQA sub-question workflows
+
+- Register DramaQA, sub-question, and VQA-Introspect datasets and adapt tokenization and training paths.\n- Add focused train and evaluation launchers while keeping checkpoints and local datasets outside Git.
+---
+ dataloader/__init__.py           |  19 ++-
+ dataloader/dramaqa.py            |  14 ++-
+ dataloader/statistics_dramaqa.py |  51 ++++++++
+ dataloader/subqa_dramaqa.py      | 194 +++++++++++++++++++++++++++++++
+ dataloader/vqa_introspect.py     | 113 ++++++++++++++++++
+ dramaqa.sh                       |   1 +
+ engine.py                        |  31 ++++-
+ llama/tokenizer.py               |  20 ++--
+ llama_vqa.py                     |   1 +
+ subqa_dramaqa_multigpu.sh        |   1 +
+ subqa_dramaqa_singlegpu.sh       |   1 +
+ test_dramaqa.sh                  |   1 +
+ test_subqa_dramaqa_multigpu.sh   |   1 +
+ train.py                         |   5 +-
+ tvqa.sh                          |   1 +
+ vqaintrospect.sh                 |   1 +
+ 16 files changed, 440 insertions(+), 15 deletions(-)
+ create mode 100644 dataloader/statistics_dramaqa.py
+ create mode 100644 dataloader/subqa_dramaqa.py
+ create mode 100644 dataloader/vqa_introspect.py
+ create mode 100755 dramaqa.sh
+ create mode 100755 subqa_dramaqa_multigpu.sh
+ create mode 100755 subqa_dramaqa_singlegpu.sh
+ create mode 100755 test_dramaqa.sh
+ create mode 100755 test_subqa_dramaqa_multigpu.sh
+ create mode 100755 tvqa.sh
+ create mode 100755 vqaintrospect.sh
+
+diff --git a/dataloader/__init__.py b/dataloader/__init__.py
+index ca4bb26..b4a8bac 100644
+--- a/dataloader/__init__.py
++++ b/dataloader/__init__.py
+@@ -5,10 +5,12 @@ from .dramaqa import DramaQA
+ from .star import STAR
+ from .vlep import VLEP
+ from .tvqa import TVQA
++from .vqa_introspect import VQA_Introspect
++from .subqa_dramaqa import SubQA_DramaQA
+ 
+ 
+-dataset_mapping = {'nextqa': NextQA, 'star': STAR, 'dramaqa': DramaQA, 'vlep': VLEP, 'tvqa': TVQA}
+-num_options_mapping = {'nextqa': 5, 'star': 4, 'dramaqa': 5, 'vlep': 2, 'tvqa': 5}
++dataset_mapping = {'nextqa': NextQA, 'star': STAR, 'dramaqa': DramaQA, 'vlep': VLEP, 'tvqa': TVQA, 'vqaintrospect': VQA_Introspect, 'subqa_dramaqa': SubQA_DramaQA}
++num_options_mapping = {'nextqa': 5, 'star': 4, 'dramaqa': 5, 'vlep': 2, 'tvqa': 5, 'vqaintrospect': 5, 'subqa_dramaqa': 5}
+ 
+ def load_data(args, tokenizer, split='train'):
+     args.num_options = num_options_mapping[args.dataset]
+@@ -57,6 +59,15 @@ def batch_collate(batch):
+     qav_label_mask = torch.stack([batch[i]["label_mask"]['qav'] for i in range(bs)])
+     label_mask = {'vqa': vqa_label_mask, 'vaq': vaq_label_mask, 'qav': qav_label_mask}
+ 
+-    answer = torch.tensor([batch[i]["answer"] for i in range(bs)])
++    q_level_logic = [batch[i]["q_level_logic"] for i in range(bs)]
++
++    # for i in range(bs):
++    #     print('batch[i]["answer"]:', batch[i]["answer"], '\n', batch[i]["answer"][-1])
++        
++    # real_answer = torch.tensor([int(batch[i]["answer"]) for i in range(bs)]) # dramaqa
++    # answer = torch.tensor([batch[i]["answer"] for i in range(bs)]) # dramaqa
++    real_answer = torch.tensor([int(batch[i]["answer"][-1]) for i in range(bs)]) # subqa_dramaqa
++    answer = [batch[i]["answer"] for i in range(bs)] # subqa_dramaqa
+     return {"vid": vid, "video": video, "video_len": video_len, "text": text, "text_id": text_id, "label": label, "video_start": video_start,
+-            "video_index": video_index, "label_mask": label_mask, "qid": qid, "answer": answer, "qtype": qtype}
+\ No newline at end of file
++            "video_index": video_index, "label_mask": label_mask, "qid": qid, "answer": answer, "real_answer": real_answer, "qtype": qtype,
++            "q_level_logic": q_level_logic,}
+\ No newline at end of file
+diff --git a/dataloader/dramaqa.py b/dataloader/dramaqa.py
+index e9188a8..c116b3a 100644
+--- a/dataloader/dramaqa.py
++++ b/dataloader/dramaqa.py
+@@ -5,11 +5,19 @@ import json
+ class DramaQA(BaseDataset):
+     def __init__(self, args=None, tokenizer=None, split='train'):
+         super().__init__(args, tokenizer, split)
++        # data = json.load(open(f'./data/dramaqa/AnotherMissOhQA_{split}_set.json', "r"))
++        # self.data = [x for x in data if x['q_level_logic'] == 4]
+         self.data = json.load(open(f'./data/dramaqa/AnotherMissOhQA_{split}_set.json', "r"))
++
+         self.features = torch.load(f'./data/dramaqa/clipvitl14.pth')
+         self.answer_mapping = {0: '(A)', 1: '(B)', 2: '(C)', 3: '(D)', 4: '(E)'}
+         self.num_options = 5
+         print(f"Num {split} data: {len(self.data)}")
++        print(f"Num features: {len(self.features)}, type: {type(self.features)}")
++        # print(self.features.keys())
++        json.dump(list(self.features.keys()), open(f'dramaqa_features_{split}_key.json', 'w'))
++        # import pdb
++        # pdb.set_trace()
+         
+     def _get_text(self, idx):
+         question = self.data[idx]["que"].capitalize().strip()
+@@ -74,8 +82,12 @@ class DramaQA(BaseDataset):
+         text = self._get_text(idx)
+         text_id, label, video_start, video_index, label_mask = self._get_text_token(text, answer)
+         video, video_len, scene = self._get_video(f'{vid}', idx)
++        
++        q_level_logic = self.data[idx]['q_level_logic']
++
+         return {"vid": vid, "video": video, "video_len": video_len, "text": text, "text_id": text_id, "label": label, "video_start": video_start,
+-                "video_index": video_index, "label_mask": label_mask, "qid": idx, "answer": answer, "qtype": qtype}
++                "video_index": video_index, "label_mask": label_mask, "qid": idx, "answer": answer, "qtype": qtype,
++                "q_level_logic": q_level_logic,}
+ 
+     def __len__(self):
+         return len(self.data)
+\ No newline at end of file
+diff --git a/dataloader/statistics_dramaqa.py b/dataloader/statistics_dramaqa.py
+new file mode 100644
+index 0000000..c9d2d5f
+--- /dev/null
++++ b/dataloader/statistics_dramaqa.py
+@@ -0,0 +1,51 @@
++import os
++import json
++import glob
++from pprint import pprint
++
++from collections import Counter
++
++# result = ['# Questions', '# Q lv 1', '# Q lv 2', '# Q lv 3', '# Q lv 4', '# Shot Q', '# Scene Q']
++#           '# Q lv 1', '# Q lv 2', '# Q lv 3', '# Q lv 4' 'Total'
++# # Shot Q |
++# # Scene Q|
++# # Total  |
++
++for split in ['train', 'val', 'test']:
++    result = [[0 for _ in range(5)] for _ in range(3)]
++    json_data = json.load(open(f'/data1/AnotherMissOh/AnotherMissOhQA_{split}_set.json', 'r'))
++    for sample in json_data:
++        qtype = len(sample["shot_contained"])
++        lv = sample["q_level_logic"]
++        result[qtype-1][lv-1] += 1
++    
++    for j in range(4):
++        result[2][j] = result[0][j] + result[1][j]
++    for i in range(3):
++        result[i][4] = sum(result[i][:4])
++    
++    print(split)
++    for i in range(3):
++        for j in range(5):
++            print(f'{result[i][j]:8}', end='')
++        print()
++
++counter = Counter()
++# walks = os.walk('/data1/AnotherMissOh/images/')
++# print(walks)
++
++for (root, dirs, files) in os.walk('/data1/AnotherMissOh/images/'):
++
++    for i, dir in enumerate(dirs):
++        # if i> 0:
++            # break
++        print(dir)
++        cnt = len(dir)
++        if cnt == 15:
++            counter["Episode"] += 1
++        elif cnt == 3:
++            counter["Scene"] += 1
++        elif cnt == 4:
++            counter["Shot"] += 1
++
++print(counter)
+\ No newline at end of file
+diff --git a/dataloader/subqa_dramaqa.py b/dataloader/subqa_dramaqa.py
+new file mode 100644
+index 0000000..dfc6ee1
+--- /dev/null
++++ b/dataloader/subqa_dramaqa.py
+@@ -0,0 +1,194 @@
++import torch
++# from .dramaqa import DramaQA
++from .base_dataset import BaseDataset
++import json
++import os
++import glob
++import random
++
++
++class SubQA_DramaQA(BaseDataset):
++    def __init__(self, args=None, tokenizer=None, split='train'):
++        super().__init__(args, tokenizer, split)
++        self.data = self._get_data(split)
++        self.features = torch.load(f'./data/dramaqa/clipvitl14.pth')
++        self.split = split
++        self.answer_mapping = {0: '0', 1: '1', 2: '2', 3: '3', 4: '4'}
++        self.num_options = 5
++        print(f"Num {split} data: {len(self.data)}")
++        print(f"Num features: {len(self.features)}, type: {type(self.features)}")
++        # print(self.features.keys())
++        json.dump(list(self.features.keys()), open(f'subqa_dramaqa_features_{split}_key.json', 'w'))
++        self._cnt = 0
++    
++        
++    def _get_data(self, split):
++        data_path = f'./data/dramaqa/AnotherMissOhQA_{split}_set.json'
++        json_data = json.load(open(data_path, "r"))
++        if split == "train":
++            scene_anns = []
++            shot_qas = {}
++            for ann in json_data:
++                vid = ann["vid"]
++                if vid.endswith("0000"):  # scene
++                    scene_anns.append(ann.copy())
++                else:   # shot
++                    key = vid[:-4] + "0000" # ex. AnotherMissOh14_001_0000
++                    if key not in shot_qas:
++                        shot_qas[key] = []
++                    shot_qas[key].append((
++                        ann["que"],
++                        ann["answers"][ann["correct_idx"]]
++                    ))
++
++            result = []
++            for scene_ann in scene_anns:
++                sample = scene_ann.copy()
++                vid = scene_ann["vid"]
++                if vid in shot_qas:
++                    sample["sub_qa_list"] = shot_qas[vid]
++                    result.append(sample)
++            
++            from pprint import pprint
++            # pprint(result[0])
++            return result
++
++        else:
++            return json_data
++
++    def __getitem__(self, idx):
++        vid = self.data[idx]['vid']
++        qtype = -1
++
++        if 'sub_qa_list' in self.data[idx]: # scene
++            sub_qa_list = self.data[idx]['sub_qa_list']
++            # sub_q, sub_a = random.choice(sub_qa_list) #['sub_qa']
++            # answer = f"related_question: {sub_q}\nanswer: {sub_a}\nAnswer: The answer is {self.data[idx]['correct_idx']}"
++            sub_N = min(len(sub_qa_list), 4)
++            samples = random.sample(sub_qa_list, sub_N)
++            for sample in samples:
++                sub_q, sub_a = sample
++                answer = f"related_question: {sub_q}\nanswer: {sub_a}\n"
++                
++            answer += f"Answer: The answer is {self.data[idx]['correct_idx']}"
++        else: # shot
++            answer = f"Answer: The answer is {self.data[idx]['correct_idx']}"
++        
++        if self._cnt < 3: 
++            self._cnt += 1
++            print('getitem answer:', answer)
++
++        text = self._get_text(idx)
++        text_id, label, video_start, video_index, label_mask = self._get_text_token(text, answer)
++        video, video_len, scene = self._get_video(f'{vid}', idx)
++
++        q_level_logic = self.data[idx]['q_level_logic']
++
++        return {"vid": vid, "video": video, "video_len": video_len, "text": text, "text_id": text_id, "label": label, "video_start": video_start,
++                "video_index": video_index, "label_mask": label_mask, "qid": idx, "answer": answer, "qtype": qtype, 
++                "q_level_logic": q_level_logic}
++
++
++    def _get_text(self, idx):
++        if self.split == "train":
++            question = self.data[idx]["que"].capitalize().strip()
++            if question[-1] != "?":
++                question = str(question) + "?"
++
++            inst_text = "You are a professional assistant. \
++Given a video, step by step, you generate a related question and answer. And, answer the Question.\n"
++
++            # print('*' * 200, '\n', 'sub_qa:', sub_q, sub_a)
++            options = self.data[idx]['answers']
++
++            q_text = f"Question: {question}\n"
++
++            o_text = "Choices: \n"
++            for i in range(self.num_options):
++                o_text += f"{self.answer_mapping[i]} {options[i]}\n"
++            
++            text = {'q_text': inst_text + q_text, 'o_text': o_text, 'a_text': ''}
++            return text
++    #         question = self.data[idx]["que"].capitalize().strip()
++    #         if question[-1] != "?":
++    #             question = str(question) + "?"
++
++    #         inst_text = "You are a professional assistant. \
++    # A video and a related question and answer are provided. You must answer the last question.\n"
++
++    #         sub_qa_list = self.data[idx]['sub_qa_list']
++    #         sub_q, sub_a = random.choice(sub_qa_list) #['sub_qa']
++    #         # print('*' * 200, '\n', 'sub_qa:', sub_q, sub_a)
++    #         options = self.data[idx]['answers']
++
++    #         sub_text = f"Question: {sub_q}\nAnswer: {sub_a}\n"
++    #         q_text = f"Question: {question}\n"
++
++    #         o_text = "Choices: \n"
++    #         for i in range(self.num_options):
++    #             o_text += f"{self.answer_mapping[i]} {options[i]}\n"
++
++    #         a_text = "Answer: The answer is " # "Answer: " #
++            
++    #         text = {'q_text': inst_text + sub_text + q_text, 'o_text': o_text, 'a_text': a_text}
++    #         return text
++
++        else:
++            question = self.data[idx]["que"].capitalize().strip()
++            if question[-1] != "?":
++                question = str(question) + "?"
++
++            options = self.data[idx]['answers']
++
++            q_text = f"Question: {question}\n"
++            o_text = "Choices: \n"
++            for i in range(self.num_options):
++                o_text += f"{self.answer_mapping[i]} {options[i]}\n"
++            a_text = "Answer: The answer is "
++
++            text = {'q_text': q_text, 'o_text': o_text, 'a_text': a_text, 'options': options}
++            return text
++
++    def _get_video(self, video_id , idx):
++        
++        scene = True
++        # Scene
++        if video_id[-4:] == '0000':
++            shots = self.data[idx]['shot_contained']
++            start, end = shots[0], shots[1]
++
++            for i in range(start, end+1):
++                v_name = video_id[:-4] + f'{i:04}'
++
++                if v_name not in self.features.keys(): 
++                    print(v_name, " Not in features")
++                    nxt_vid = torch.zeros(1, self.features_dim)
++                else: nxt_vid = self.features[v_name].float()
++
++                if i == start: video = nxt_vid
++                else: video = torch.concat((video, nxt_vid), dim = 0)
++        # Shot
++        else:
++            scene = False
++            if video_id not in self.features.keys():
++                print(video_id, "Not in freatures")
++                video = torch.zeros(1, self.features_dim)
++            else:
++                video = self.features[video_id].float()
++
++        if len(video) > self.max_feats:
++            sampled = []
++            for j in range(self.max_feats):
++                sampled.append(video[(j * len(video)) // self.max_feats])
++            video = torch.stack(sampled)
++            video_len = self.max_feats
++        elif len(video) < self.max_feats:
++            video_len = len(video)
++            video = torch.cat([video, torch.zeros(self.max_feats - video_len, self.features_dim)], 0)
++        else:
++            video_len = self.max_feats
++
++        return video, video_len, scene
++
++    def __len__(self):
++        return len(self.data)
+\ No newline at end of file
+diff --git a/dataloader/vqa_introspect.py b/dataloader/vqa_introspect.py
+new file mode 100644
+index 0000000..d3dd183
+--- /dev/null
++++ b/dataloader/vqa_introspect.py
+@@ -0,0 +1,113 @@
++import torch
++from .base_dataset import BaseDataset
++import json
++import random
++
++"""
++train
++>>> pprint(data['265814016'])
++{'image_id': 265814,
++ 'introspect': [{'pred_q_type': 'reasoning',
++                 'sub_qa': [{'sub_answer': 'yes',
++                             'sub_question': 'are there two sets of windows?'}]},
++                {'pred_q_type': 'reasoning',
++                 'sub_qa': [{'sub_answer': 'yes',
++                             'sub_question': 'is the bus a double decker?'}]},
++                {'pred_q_type': 'perception',
++                 'sub_qa': [{'sub_answer': 'two',
++                             'sub_question': 'how many decks does the bus have?'}]}],
++ 'reasoning_answer_most_common': 'yes',
++ 'reasoning_question': 'is this a double decker bus?'}
++
++ val
++ >>> pprint(data['565248001'])
++{'image_id': 565248,
++ 'introspect': [{'pred_q_type': 'perception',
++                 'sub_qa': [{'sub_answer': 'yea',
++                             'sub_question': 'are the woman on the horses near to the sea?'}]},
++                {'pred_q_type': 'reasoning',
++                 'sub_qa': [{'sub_answer': 'yes',
++                             'sub_question': 'is there sand and whitewater?'}]},
++                {'pred_q_type': 'perception',
++                 'sub_qa': [{'sub_answer': 'yea',
++                             'sub_question': 'are the woman on the horses near to the sea?'}]},
++                {'pred_q_type': 'reasoning',
++                 'sub_qa': [{'sub_answer': 'yes',
++                             'sub_question': 'is there sand and whitewater?'}]}],
++ 'reasoning_answer_most_common': 'yes',
++ 'reasoning_question': 'are they at the beach?'}
++"""
++class VQA_Introspect(BaseDataset):
++    def __init__(self, args=None, tokenizer=None, split='train'):
++        super().__init__(args, tokenizer, split)
++        data = json.load(open(f'./data/vqaintrospect/VQAIntrospect_{split}v1.0.json', "r"))
++        self.data = []
++        for key, value in data.items():
++            sample = value.copy()
++            sample['q_id'] = key
++            self.data.append(sample)
++        self.features = torch.load(f'./data/vqaintrospect/CLIPViT_L14/clipvitl14.pth')
++        self.answer_mapping = {0: '(A)', 1: '(B)', 2: '(C)', 3: '(D)', 4: '(E)'}
++        self.num_options = 5
++
++        print(f"Num {split} data: {len(self.data)}")
++        print(f"Num features: {len(self.features)}, type: {type(self.features)}")
++        print(self.features.keys())
++        json.dump(list(self.features.keys()), open(f'data/features_key/vqaintrospect_features_{split}_key.json', 'w')) # TODO
++        
++    def _get_text(self, idx):
++        question = self.data[idx]["reasoning_question"].capitalize().strip()
++        if question[-1] != "?":
++            question = str(question) + "?"
++
++        inst_text = "You are a professional assistant. \
++A video and related questions and answers are provided. You must answer the last question.\n"
++
++        sub_qa_list = self.data[idx]['introspect']
++        sub_qa = random.choice(sub_qa_list)['sub_qa'][0]
++        # print('*' * 200, '\n', 'sub_qa:', sub_qa)
++        sub_q = sub_qa['sub_question']
++        sub_a = sub_qa['sub_answer']
++
++        sub_text = f"Question: {sub_q}\nAnswer: {sub_a}\n"
++        q_text = f"Question: {question}\n"
++        a_text = "Answer: " #"Answer: The answer is "
++
++        # text = {'q_text': q_text, 'o_text': o_text, 'a_text': a_text, 'options': options}
++        text = {'q_text': '', 'o_text': '', 'a_text': inst_text + q_text + a_text}
++
++        return text
++
++    def _get_video(self, video_id):
++        if video_id not in self.features.keys():
++            print(video_id, "Not in features")
++            video = torch.zeros(1, self.features_dim)
++        else:
++            video = self.features[video_id].float()
++        
++        if len(video) > self.max_feats:
++            sampled = []
++            for j in range(self.max_feats):
++                sampled.append(video[(j * len(video)) // self.max_feats])
++            video = torch.stack(sampled)
++            video_len = self.max_feats
++        elif len(video) < self.max_feats:
++            video_len = len(video)
++            video = torch.cat([video, torch.zeros(self.max_feats - video_len, self.features_dim)], 0)
++        else:
++            video_len = self.max_feats
++
++        return video, video_len
++
++    def __getitem__(self, idx):
++        vid = self.data[idx]['image_id']
++        qtype = -1
++        answer = self.data[idx]['reasoning_answer_most_common']
++        text = self._get_text(idx)
++        text_id, label, video_start, video_index, label_mask = self._get_text_token(text, answer)
++        video, video_len = self._get_video(f'{vid}', idx)
++        return {"vid": vid, "video": video, "video_len": video_len, "text": text, "text_id": text_id, "label": label, "video_start": video_start,
++                "video_index": video_index, "label_mask": label_mask, "qid": idx, "answer": answer, "qtype": qtype}
++
++    def __len__(self):
++        return len(self.data)
+\ No newline at end of file
+diff --git a/dramaqa.sh b/dramaqa.sh
+new file mode 100755
+index 0000000..0d848b8
+--- /dev/null
++++ b/dramaqa.sh
+@@ -0,0 +1 @@
++NCCL_P2P_DISABLE=1 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5 torchrun --rdzv_endpoint 127.0.0.1:1234 --nproc_per_node 6 train.py --model 7B --max_seq_len 384 --batch_size 2 --epochs 5 --warmup_epochs 2 --bias 3 --tau 100. --max_feats 10 --dataset dramaqa --blr 9e-2 --weight_decay 0.10 --output_dir ./checkpoint/dramaqa --accum_iter 8 --vaq --qav
+diff --git a/engine.py b/engine.py
+index e50f8e6..63d4494 100644
+--- a/engine.py
++++ b/engine.py
+@@ -11,7 +11,7 @@ def train_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: to
+     metric_logger = misc.MetricLogger(delimiter="  ")
+     metric_logger.add_meter('lr', misc.SmoothedValue(window_size=1, fmt='{value:.6f}'))
+     header = 'Epoch: [{}]'.format(epoch)
+-    print_freq = int(len(data_loader) / 4)
++    print_freq = int(len(data_loader) / 20)
+     accum_iter = args.accum_iter
+ 
+     optimizer.zero_grad()
+@@ -60,8 +60,18 @@ def val_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: torc
+     header = 'Epoch: [{}]'.format(epoch)
+     print_freq = int(len(data_loader) / 4)
+ 
++    acc_lv = {i+1: 0 for i in range(4)}
++    tot_lv = {i+1: 0 for i in range(4)}
++
+     for data_iter_step, data in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
+-        answer = data['answer'].cuda()
++        # print('data:', data.keys())
++        # print("data['answer']:", data['answer']) # data['answer']: tensor([0, 2])
++        # print("data['real_answer']:", data['real_answer'])
++        # import pdb
++        # pdb.set_trace()
++
++        # answer = data['answer'].cuda() # dramaqa
++        answer = data['real_answer'].cuda() # subqa_dramaqa
+         bsz = answer.shape[0]
+ 
+         with torch.no_grad():
+@@ -79,7 +89,24 @@ def val_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: torc
+         metric_logger.update(lr=lr)
+         metric_logger.update(n=bsz, acc=acc)
+ 
++        levels = data['q_level_logic']
++        for ans_, pre_, lv_ in zip(answer, prediction, levels):
++            acc_lv[lv_] += ans_ == pre_
++            tot_lv[lv_] += 1
++        
++        # for i in range(4):
++        #     if 
++        #     acc_lv[i] /= tot_lv[i]
++        
++        # metric_logger.update(acc_1 = acc_lv[0])
++        # metric_logger.update(acc_2 = acc_lv[1])
++        # metric_logger.update(acc_3 = acc_lv[2])
++        # metric_logger.update(acc_4 = acc_lv[3])
++
+     # gather the stats from all processes
++
++    
++
+     metric_logger.synchronize_between_processes()
+     print("Averaged stats:", metric_logger)
+     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
+diff --git a/llama/tokenizer.py b/llama/tokenizer.py
+index cd401ec..d21c95a 100755
+--- a/llama/tokenizer.py
++++ b/llama/tokenizer.py
+@@ -24,7 +24,7 @@ class Tokenizer:
+         self.pad_id: int = self.sp_model.pad_id()
+         
+         self.v_token_id = 15167
+-        self.q_token_id = 16492
++        self.q_token_id = 16492 # Question
+         self.a_token_id = 22550
+         self.nl_id = 13
+         logger.info(f"#words: {self.n_words} - BOS ID: {self.bos_id} - EOS ID: {self.eos_id}")
+@@ -52,7 +52,8 @@ class Tokenizer:
+         s2 = q_text + o_text + a_text
+ 
+         if split == 'train':
+-            s2 = s2 + answer_mapping[answer] 
++            # s2 = s2 + answer_mapping[answer] 
++            s2 = s2 + answer
+             t2 = self.sp_model.encode(s2) + [self.eos_id]
+             t = [t1 + [-2 for _ in range(max_feats)] + [self.nl_id] + t2]
+             prefix_index = t[0].index(self.a_token_id) + 5
+@@ -61,7 +62,8 @@ class Tokenizer:
+             for k, v in answer_mapping.items():
+                 t2 = self.sp_model.encode(s2 + v) + [self.eos_id]
+                 t.append(t1 + [-2 for _ in range(max_feats)] + [self.nl_id] + t2)
+-            prefix_index = t[answer].index(self.a_token_id) + 5
++            # prefix_index = t[answer].index(self.a_token_id) + 5 # dramaqa
++            prefix_index = t[int(answer[-1])].index(self.a_token_id) + 5 # subqa_dramaqa
+         return t, prefix_index, video_start
+ 
+     def encode_vaq(self, text=None, max_feats=10, split='train', answer_mapping=None, answer=None) -> List[int]:
+@@ -77,7 +79,8 @@ class Tokenizer:
+         s2 = o_text + a_text
+         
+         if split == 'train':
+-            s2 = s2 + answer_mapping[answer] + "\n" + q_text
++            # s2 = s2 + answer_mapping[answer] + "\n" + q_text
++            s2 = s2 + answer + "\n" + q_text
+             t2 = self.sp_model.encode(s2) + [self.eos_id]
+             t = [t1 + [-2 for _ in range(max_feats)] + [self.nl_id] + t2]
+             prefix_index = t[0].index(self.q_token_id) + 2
+@@ -86,7 +89,8 @@ class Tokenizer:
+             for k, v in answer_mapping.items():
+                 t2 = self.sp_model.encode(s2 + v + "\n" + q_text) + [self.eos_id]
+                 t.append(t1 + [-2 for _ in range(max_feats)] + [self.nl_id] + t2)
+-            prefix_index = t[answer].index(self.q_token_id) + 2
++            # prefix_index = t[answer].index(self.q_token_id) + 2 # dramaqa
++            prefix_index = t[int(answer[-1])].index(self.q_token_id) + 2 # subqa_dramaqa
+         return t, prefix_index, video_start
+     
+     def encode_qav(self, text=None, max_feats=10, split='train', answer_mapping=None, answer=None) -> List[int]:
+@@ -98,7 +102,8 @@ class Tokenizer:
+         s1 = i_text + q_text + o_text + a_text
+         
+         if split == 'train':
+-            s1 = s1 + answer_mapping[answer] + "\n" + "Video:"
++            # s1 = s1 + answer_mapping[answer] + "\n" + "Video:"
++            s1 = s1 + answer + "\n" + "Video:"
+             t1 = [self.bos_id] + self.sp_model.encode(s1)
+             t = [t1 + [-2 for _ in range(max_feats)] + [self.eos_id]]
+             prefix_index = t[0].index(self.v_token_id) + 2
+@@ -107,7 +112,8 @@ class Tokenizer:
+             for k, v in answer_mapping.items():
+                 t1 = [self.bos_id] + self.sp_model.encode(s1 + v + "\n" + "Video:") + [-2 for _ in range(max_feats)] + [self.eos_id]
+                 t.append(t1)
+-            prefix_index = t[answer].index(self.v_token_id) + 2
++            # prefix_index = t[answer].index(self.v_token_id) + 2 # dramaqa
++            prefix_index = t[int(answer[-1])].index(self.v_token_id) + 2 # subqa_dramaqa
+         return t, prefix_index
+ 
+     def decode(self, t: List[int]) -> str:
+diff --git a/llama_vqa.py b/llama_vqa.py
+index c484b11..4435d17 100644
+--- a/llama_vqa.py
++++ b/llama_vqa.py
+@@ -6,6 +6,7 @@ from pathlib import Path
+ def LLaMA_VQA(args, **kwargs):
+     with open(f'{args.llama_model_path}{args.model}/params.json', "r") as f:
+         params = json.loads(f.read())
++        # {"dim": 4096, "multiple_of": 256, "n_heads": 32, "n_layers": 32, "norm_eps": 1e-05, "vocab_size": -1}
+     tokenizer = Tokenizer(model_path=f'{args.llama_model_path}/tokenizer.model')
+     print(f"Using model: {args.model}")
+     
+diff --git a/subqa_dramaqa_multigpu.sh b/subqa_dramaqa_multigpu.sh
+new file mode 100755
+index 0000000..dbd80a6
+--- /dev/null
++++ b/subqa_dramaqa_multigpu.sh
+@@ -0,0 +1 @@
++NCCL_P2P_DISABLE=1 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5 torchrun --rdzv_endpoint 127.0.0.1:1234 --nproc_per_node 6 train.py --model 7B --max_seq_len 384 --batch_size 2 --epochs 10 --warmup_epochs 2 --bias 3 --tau 100. --max_feats 10 --dataset subqa_dramaqa --blr 9e-2 --weight_decay 0.10 --output_dir ./checkpoint/subqa_dramaqa --accum_iter 8 --vaq --qav --resume checkpoint/dramaqa/dramaqa.pth
+diff --git a/subqa_dramaqa_singlegpu.sh b/subqa_dramaqa_singlegpu.sh
+new file mode 100755
+index 0000000..3ef4f10
+--- /dev/null
++++ b/subqa_dramaqa_singlegpu.sh
+@@ -0,0 +1 @@
++python train.py --model 7B --max_seq_len 384 --batch_size 2 --epochs 10 --warmup_epochs 2 --bias 3 --tau 100. --max_feats 10 --dataset subqa_dramaqa --blr 9e-2 --weight_decay 0.10 --output_dir ./checkpoint/subqa_dramaqa --accum_iter 8 --vaq --qav --resume checkpoint/dramaqa/checkpoint_best.pth
+diff --git a/test_dramaqa.sh b/test_dramaqa.sh
+new file mode 100755
+index 0000000..2223ed2
+--- /dev/null
++++ b/test_dramaqa.sh
+@@ -0,0 +1 @@
++NCCL_P2P_DISABLE=1 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5 torchrun --rdzv_endpoint 127.0.0.1:1234 --nproc_per_node 6 eval.py --model 7B --max_seq_len 384 --batch_size 2 --epochs 5 --warmup_epochs 2 --bias 3 --tau 100. --max_feats 10 --dataset dramaqa --blr 9e-2 --weight_decay 0.10 --output_dir ./checkpoint/dramaqa --accum_iter 8 --vaq --qav --resume checkpoint/dramaqa/checkpoint_best.pth
+diff --git a/test_subqa_dramaqa_multigpu.sh b/test_subqa_dramaqa_multigpu.sh
+new file mode 100755
+index 0000000..d8dbd75
+--- /dev/null
++++ b/test_subqa_dramaqa_multigpu.sh
+@@ -0,0 +1 @@
++NCCL_P2P_DISABLE=1 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5 torchrun --rdzv_endpoint 127.0.0.1:1234 --nproc_per_node 6 eval.py --model 7B --max_seq_len 384 --batch_size 2 --epochs 10 --warmup_epochs 2 --bias 3 --tau 100. --max_feats 10 --dataset subqa_dramaqa --blr 9e-2 --weight_decay 0.10 --output_dir ./checkpoint/subqa_dramaqa --accum_iter 8 --vaq --qav --resume checkpoint/subqa_dramaqa/checkpoint_best.pth
+diff --git a/train.py b/train.py
+index b5212f2..8b861d4 100644
+--- a/train.py
++++ b/train.py
+@@ -119,13 +119,16 @@ def main(args):
+     misc.load_model(args=args, model_without_ddp=model_without_ddp, optimizer=optimizer, loss_scaler=loss_scaler)
+ 
+     print(f"Start training for {args.epochs} epochs")
++    print(args)
+     start_time = time.time()
+-    for epoch in range(args.start_epoch, args.epochs):
++    # for epoch in range(args.start_epoch, args.epochs):
++    for epoch in range(0, args.epochs):
+ 
+         if args.distributed:
+             data_loader_train.sampler.set_epoch(epoch)
+             data_loader_val.sampler.set_epoch(epoch)
+ 
++        # print(next(iter(data_loader_val)))
+         train_stats = train_one_epoch(model, data_loader_train, optimizer, epoch, loss_scaler, args=args)
+         val_stats = val_one_epoch(model_without_ddp, data_loader_val, optimizer, epoch, args=args)
+ 
+diff --git a/tvqa.sh b/tvqa.sh
+new file mode 100755
+index 0000000..55c0d4f
+--- /dev/null
++++ b/tvqa.sh
+@@ -0,0 +1 @@
++NCCL_P2P_DISABLE=1 torchrun --rdzv_endpoint 127.0.0.1:1234 --nproc_per_node 6 train.py --model 7B --max_seq_len 650 --batch_size 1 --epochs 5 --warmup_epochs 2 --bias 3 --tau 100. --max_feats 10 --dataset tvqa --blr 7e-2 --weight_decay 0.02 --output_dir ./checkpoint/tvqa --dataset tvqa --accum_iter 4 --sub --vaq --qav
+diff --git a/vqaintrospect.sh b/vqaintrospect.sh
+new file mode 100755
+index 0000000..2e02577
+--- /dev/null
++++ b/vqaintrospect.sh
+@@ -0,0 +1 @@
++NCCL_P2P_DISABLE=1 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5 torchrun --rdzv_endpoint 127.0.0.1:1234 --nproc_per_node 6 train.py --model 7B --max_seq_len 384 --batch_size 2 --epochs 5 --warmup_epochs 2 --bias 3 --tau 100. --max_feats 10 --dataset vqaintrospect --blr 9e-2 --weight_decay 0.10 --output_dir ./checkpoint/vqaintrospect --accum_iter 8 --vaq
+-- 
+2.34.1
+

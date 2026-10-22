@@ -1,0 +1,35 @@
+From 5ea190fd401b03ece727cf290e10c426ea014103 Mon Sep 17 00:00:00 2001
+From: greeksharifa <greeksharifa@gmail.com>
+Date: Thu, 23 Jul 2026 19:57:13 +0900
+Subject: [PATCH] Add the recovered DramaQG inference launcher
+
+- Preserve the local inference command used with the 2023 bridge.
+- Ignore runtime caches, generated output, and local model or dataset links.
+---
+ .gitignore  | 5 +++++
+ 2023/run.sh | 1 +
+ 2 files changed, 6 insertions(+)
+ create mode 100644 .gitignore
+ create mode 100644 2023/run.sh
+
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..004d1e8
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,5 @@
++# Local runtime caches, generated predictions, and model/data links.
++/2023/__pycache__/
++/2023/output/
++/2023/data/AnotherMissOh
++/2023/blip2-flan-t5-xxl
+diff --git a/2023/run.sh b/2023/run.sh
+new file mode 100644
+index 0000000..4fc3ba6
+--- /dev/null
++++ b/2023/run.sh
+@@ -0,0 +1 @@
++python run_inference.py --cache_dir="./blip2-flan-t5-xxl" --image_dir="/data1/AnotherMissOh/AnotherMissOh_images/" --decoding_strategy=beam --input_path="../../LBA-ARVQA/3rd_year/LBA_2024/output_KAIST.json" --output_path="output/output_KHU.json"
+-- 
+2.34.1
+
