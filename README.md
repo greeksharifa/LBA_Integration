@@ -82,3 +82,11 @@ environments, caches, logs, and generated datasets/results outside Git. Store
 only small, intentional fixtures or historical examples. Configure artifact
 paths locally, initialize submodules from their public upstreams, and never
 commit credentials or machine-specific secrets.
+
+## Server inventory provenance
+
+The container-level LBA map that was outside any Git repository is preserved
+as a dated source snapshot at
+[`docs/server-inventory/LBA-container-README.md`](docs/server-inventory/LBA-container-README.md).
+This snapshot records the original local inventory and attribution; use this
+README and the branch links above as the current repository map.
